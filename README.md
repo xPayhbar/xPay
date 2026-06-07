@@ -1,0 +1,2 @@
+# xPay
+Payment Policy 
