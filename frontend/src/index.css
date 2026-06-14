@@ -1,0 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #04070d; color: #e0f0ff; font-family: 'Outfit', sans-serif; }
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: #1c3050; border-radius: 2px; }
