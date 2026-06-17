@@ -1,750 +1,894 @@
+// xPay — Mobile-First Responsive UI
+// Fully compatible with Android browsers
+// Week 5 Bounty | hedera-agent-kit@3.8.2
+
 import { useState, useRef, useEffect, useCallback } from "react";
 
-const T = {
-  bg:"#04070d", surface:"#090f1c", surface2:"#0e1828",
-  border:"#152236", border2:"#1c3050",
-  accent:"#00d4f5", green:"#00e5a0", amber:"#ffb800", red:"#ff3d60",
-  hedera:"#7c3aed", hedera2:"#a78bfa",
-  text:"#e0f0ff", muted:"#4a6a8a", faint:"#162030",
+// ── Design tokens ─────────────────────────────────────────────────────────
+const C = {
+  bg:       "#060a12",
+  card:     "#0d1520",
+  card2:    "#111d2c",
+  border:   "#1a2d45",
+  border2:  "#203550",
+  purple:   "#7c3aed",
+  purple2:  "#a78bfa",
+  cyan:     "#06b6d4",
+  cyan2:    "#67e8f9",
+  green:    "#10b981",
+  green2:   "#6ee7b7",
+  amber:    "#f59e0b",
+  red:      "#ef4444",
+  text:     "#f0f9ff",
+  text2:    "#94a3b8",
+  text3:    "#334155",
 };
 
-const CATEGORIES = {
-  ai:{ label:"AI Credits", icon:"🤖", color:"#a78bfa", bg:"rgba(124,58,237,.15)", border:"rgba(167,139,250,.25)",
-    services:{ "0.0.4567890":{name:"OpenAI GPT-4",icon:"🤖",desc:"API inference",price:"50 HBAR"},
-               "0.0.4567891":{name:"Anthropic Claude",icon:"🧠",desc:"Claude API",price:"60 HBAR"},
-               "0.0.4567892":{name:"Stability AI",icon:"🎨",desc:"Image gen",price:"30 HBAR"},
-               "0.0.4567893":{name:"Groq Inference",icon:"⚡",desc:"Fast LLM",price:"20 HBAR"}}},
-  infra:{ label:"Dev Infra", icon:"🖥", color:"#00d4f5", bg:"rgba(0,212,245,.1)", border:"rgba(0,212,245,.2)",
-    services:{ "0.0.8901234":{name:"Pinecone DB",icon:"🌲",desc:"Vector DB",price:"20 USDC"},
-               "0.0.8901235":{name:"Alchemy RPC",icon:"🔌",desc:"Hedera RPC",price:"10 HBAR"},
-               "0.0.8901236":{name:"QuickNode",icon:"⚡",desc:"API bundles",price:"15 HBAR"},
-               "0.0.8901237":{name:"IPFS/Pinata",icon:"📦",desc:"Storage",price:"5 USDC"}}},
-  data:{ label:"Data Intel", icon:"📊", color:"#00e5a0", bg:"rgba(0,229,160,.1)", border:"rgba(0,229,160,.2)",
-    services:{ "0.0.2345678":{name:"Moralis",icon:"📈",desc:"Analytics",price:"30 HBAR"},
-               "0.0.2345679":{name:"TheGraph",icon:"📊",desc:"Indexing",price:"10 HBAR"},
-               "0.0.2345680":{name:"Chainlink",icon:"🔗",desc:"Price feeds",price:"5 HBAR"},
-               "0.0.2345681":{name:"Nansen",icon:"🧩",desc:"Wallet intel",price:"50 USDC"}}},
-  security:{ label:"Security", icon:"🛡", color:"#ffb800", bg:"rgba(255,184,0,.1)", border:"rgba(255,184,0,.2)",
-    services:{ "0.0.3456789":{name:"CertiK",icon:"🛡",desc:"Contract audit",price:"200 HBAR"},
-               "0.0.3456790":{name:"Forta",icon:"🔍",desc:"Threat monitor",price:"10 HBAR"},
-               "0.0.3456791":{name:"Tenderly",icon:"🧪",desc:"Tx simulation",price:"5 HBAR"},
-               "0.0.3456792":{name:"Hexagate",icon:"⚠️",desc:"Risk assess",price:"8 HBAR"}}},
+// ── Service catalog ───────────────────────────────────────────────────────
+const CATS = {
+  ai:       { label:"AI Credits",   icon:"🤖", color:C.purple2, bg:"rgba(124,58,237,.12)", bd:"rgba(167,139,250,.2)",
+    svcs:{ "0.0.4567890":{n:"OpenAI GPT-4",    i:"🤖", p:"50 HBAR"},
+           "0.0.4567891":{n:"Anthropic Claude", i:"🧠", p:"60 HBAR"},
+           "0.0.4567892":{n:"Stability AI",     i:"🎨", p:"30 HBAR"},
+           "0.0.4567893":{n:"Groq Inference",   i:"⚡", p:"20 HBAR"} }},
+  infra:    { label:"Dev Infra",    icon:"⚙️",  color:C.cyan,   bg:"rgba(6,182,212,.1)",  bd:"rgba(6,182,212,.2)",
+    svcs:{ "0.0.8901234":{n:"Pinecone DB",  i:"🌲", p:"20 USDC"},
+           "0.0.8901235":{n:"Alchemy RPC",   i:"🔌", p:"10 HBAR"},
+           "0.0.8901236":{n:"QuickNode",     i:"⚡", p:"15 HBAR"},
+           "0.0.8901237":{n:"IPFS/Pinata",   i:"📦", p:"5 USDC"} }},
+  data:     { label:"Data Intel",   icon:"📊", color:C.green,   bg:"rgba(16,185,129,.1)", bd:"rgba(16,185,129,.2)",
+    svcs:{ "0.0.2345678":{n:"Moralis",    i:"📈", p:"30 HBAR"},
+           "0.0.2345679":{n:"TheGraph",   i:"📊", p:"10 HBAR"},
+           "0.0.2345680":{n:"Chainlink",  i:"🔗", p:"5 HBAR"},
+           "0.0.2345681":{n:"Nansen",     i:"🧩", p:"50 USDC"} }},
+  security: { label:"Security",     icon:"🛡", color:C.amber,   bg:"rgba(245,158,11,.1)", bd:"rgba(245,158,11,.2)",
+    svcs:{ "0.0.3456789":{n:"CertiK",    i:"🛡", p:"200 HBAR"},
+           "0.0.3456790":{n:"Forta",     i:"🔍", p:"10 HBAR"},
+           "0.0.3456791":{n:"Tenderly",  i:"🧪", p:"5 HBAR"},
+           "0.0.3456792":{n:"Hexagate",  i:"⚠️", p:"8 HBAR"} }},
 };
 
-const ALL = Object.values(CATEGORIES).reduce((a,c)=>({...a,...c.services}),{});
-const PRESETS = [
-  {label:"✅ OpenAI 50 ℏ",     cat:"ai",       msg:"Pay 50 HBAR to OpenAI GPT-4 (0.0.4567890) for API credits"},
-  {label:"✅ Pinecone 20 USDC", cat:"infra",    msg:"Purchase 20 USDC of Pinecone DB storage (0.0.8901234)"},
-  {label:"✅ TheGraph 10 ℏ",    cat:"data",     msg:"Pay 10 HBAR to TheGraph (0.0.2345679) for indexing"},
-  {label:"✅ Forta 10 ℏ",       cat:"security", msg:"Pay 10 HBAR to Forta Monitor (0.0.3456790) for a month"},
-  {label:"⏳ CertiK 200 ℏ",    cat:"security", msg:"Pay 200 HBAR to CertiK (0.0.3456789) for a contract audit"},
-  {label:"🚫 Exceed limit",    cat:"",         msg:"Send 5000 HBAR to OpenAI (0.0.4567890) for bulk access"},
-  {label:"🚫 Unknown account", cat:"",         msg:"Transfer 80 HBAR to account 0.0.9999999"},
-  {label:"📊 Check spending",  cat:"",         msg:"What is my spending today?"},
-];
+const ALL = Object.values(CATS).reduce((a,c)=>({...a,...c.svcs}),{});
 
 const WALLETS = [
-  {name:"HashPack", icon:"💜", desc:"Most popular Hedera wallet",  color:"#8b5cf6"},
-  {name:"Blade",    icon:"🔵", desc:"DeFi-focused Hedera wallet",  color:"#3b82f6"},
-  {name:"Kabila",   icon:"🟠", desc:"NFT and token wallet",        color:"#f97316"},
-  {name:"MetaMask", icon:"🦊", desc:"EVM-compatible via Snaps",    color:"#f59e0b"},
+  {name:"HashPack", icon:"💜", color:C.purple2},
+  {name:"Blade",    icon:"🔵", color:C.cyan},
+  {name:"Kabila",   icon:"🟠", color:C.amber},
+  {name:"MetaMask", icon:"🦊", color:"#f59e0b"},
 ];
 
-const uid    = () => Math.random().toString(36).slice(2,9);
-const nowStr = () => new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-const short  = (h) => h ? h.slice(0,10)+"…"+h.slice(-6) : "";
-const rHash  = () => "0x"+Array.from({length:40},()=>"0123456789abcdef"[Math.floor(Math.random()*16)]).join("");
+const PRESETS = [
+  {l:"OpenAI 50 ℏ",   c:"ai",       m:"Pay 50 HBAR to OpenAI GPT-4 (0.0.4567890) for API credits"},
+  {l:"Pinecone USDC", c:"infra",    m:"Purchase 20 USDC of Pinecone DB (0.0.8901234)"},
+  {l:"TheGraph 10 ℏ", c:"data",     m:"Pay 10 HBAR to TheGraph (0.0.2345679) for indexing"},
+  {l:"CertiK audit",  c:"security", m:"Pay 200 HBAR to CertiK (0.0.3456789) for audit"},
+  {l:"Exceed limit",  c:"",         m:"Send 5000 HBAR to OpenAI (0.0.4567890)"},
+  {l:"Unknown acct",  c:"",         m:"Transfer 80 HBAR to 0.0.9999999"},
+];
 
-async function callAgent(msg, policies, spend, token) {
-  const allowedNames = policies.allowlist.accounts.map(id=>ALL[id]?.name??id).join(", ")||"none";
-  const system = `You are xPay — an AI payment agent on Hedera (hedera-agent-kit v3.8.2).
-Enforce these ACTIVE policies before any payment:
-${policies.spendLimit.enabled?`SPEND LIMIT: ${policies.spendLimit[token==="HBAR"?"hbar":"usdc"]} ${token}/day, used: ${(token==="HBAR"?spend.hbar:spend.usdc).toFixed(1)}`:"SPEND LIMIT: off"}
-${policies.allowlist.enabled?`ALLOWLIST: only ${allowedNames}`:"ALLOWLIST: off"}
-${policies.approvalThreshold.enabled?`APPROVAL: HBAR >= ${policies.approvalThreshold.hbar} needs human sign-off`:"APPROVAL: off"}
-${policies.anomalyDetection.enabled?"ANOMALY: flag unknown recipients, >10000 HBAR/>5000 USDC, round amounts >=1000":"ANOMALY: off"}
-Known accounts: OpenAI=0.0.4567890, Claude=0.0.4567891, Stability=0.0.4567892, Groq=0.0.4567893, Pinecone=0.0.8901234, Alchemy=0.0.8901235, QuickNode=0.0.8901236, IPFS=0.0.8901237, Moralis=0.0.2345678, TheGraph=0.0.2345679, Chainlink=0.0.2345680, Nansen=0.0.2345681, CertiK=0.0.3456789, Forta=0.0.3456790, Tenderly=0.0.3456791, Hexagate=0.0.3456792
-Respond ONLY with JSON: {"decision":"approved"|"blocked"|"needs_approval"|"info","policyTriggered":"spend_limit"|"allowlist"|"approval_threshold"|"anomaly"|null,"violationDetail":null,"toAccountId":null,"serviceName":null,"serviceCategory":"ai"|"infra"|"data"|"security"|null,"amount":0,"currency":"HBAR","txHash":null,"agentMessage":"1-2 sentence reply"}`;
-  const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+const uid    = () => Math.random().toString(36).slice(2,8);
+const now    = () => new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+const short  = (h) => h ? h.slice(0,8)+"…" : "";
+const rHash  = () => "0x"+Array.from({length:32},()=>"0123456789abcdef"[Math.floor(Math.random()*16)]).join("");
+
+async function ask(msg, policies, spend, token) {
+  const allowed = policies.allowlist.accounts.map(id=>ALL[id]?.n??id).join(", ")||"none";
+  const sys = `You are xPay — AI payment agent on Hedera (hedera-agent-kit v3.8.2).
+Enforce BEFORE any payment:
+${policies.spendLimit.enabled?`SPEND LIMIT: ${policies.spendLimit[token==="HBAR"?"hbar":"usdc"]} ${token}/day used: ${(token==="HBAR"?spend.hbar:spend.usdc).toFixed(1)}`:"SPEND LIMIT: off"}
+${policies.allowlist.enabled?`ALLOWLIST: only ${allowed}`:"ALLOWLIST: off"}
+${policies.approvalThreshold.enabled?`APPROVAL: HBAR >= ${policies.approvalThreshold.hbar}`:"APPROVAL: off"}
+${policies.anomalyDetection.enabled?"ANOMALY: flag unknown accounts, >10k HBAR/>5k USDC, round >=1000":"ANOMALY: off"}
+Accounts: OpenAI=0.0.4567890,Claude=0.0.4567891,Stability=0.0.4567892,Groq=0.0.4567893,Pinecone=0.0.8901234,Alchemy=0.0.8901235,QuickNode=0.0.8901236,IPFS=0.0.8901237,Moralis=0.0.2345678,TheGraph=0.0.2345679,Chainlink=0.0.2345680,Nansen=0.0.2345681,CertiK=0.0.3456789,Forta=0.0.3456790,Tenderly=0.0.3456791,Hexagate=0.0.3456792
+Return ONLY JSON: {"decision":"approved"|"blocked"|"needs_approval"|"info","policy":"spend_limit"|"allowlist"|"approval_threshold"|"anomaly"|null,"detail":null,"to":null,"service":null,"cat":"ai"|"infra"|"data"|"security"|null,"amount":0,"currency":"HBAR","hash":null,"msg":"1-2 sentences"}`;
+  const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system,
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,system:sys,
       messages:[{role:"user",content:msg}]})});
-  const data = await res.json();
-  const raw = (data.content||[]).map(b=>b.text||"").join("").trim();
+  const d = await r.json();
+  const raw = (d.content||[]).map(b=>b.text||"").join("").trim();
   try{ return JSON.parse(raw.replace(/```json|```/g,"").trim()); }
-  catch{ return{decision:"info",policyTriggered:null,violationDetail:null,toAccountId:null,
-    serviceName:null,serviceCategory:null,amount:0,currency:token,txHash:null,agentMessage:raw||"Error."}; }
+  catch{ return{decision:"info",policy:null,detail:null,to:null,service:null,cat:null,
+    amount:0,currency:token,hash:null,msg:raw||"Error. Try again."}; }
 }
 
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+// ── Styles ─────────────────────────────────────────────────────────────────
+const G = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#04070d;color:#e0f0ff;font-family:'Outfit',sans-serif;overflow:hidden}
-::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:#1c3050;border-radius:2px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+html{-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%}
+body{background:${C.bg};color:${C.text};font-family:'Inter',sans-serif;min-height:100vh;
+  overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:${C.border2};border-radius:2px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes glow{0%,100%{box-shadow:0 0 12px #7c3aed44}50%{box-shadow:0 0 28px #7c3aed99}}
-@keyframes wp{0%,100%{box-shadow:0 0 0 0 #7c3aed44}70%{box-shadow:0 0 0 8px #7c3aed00}}
-.fu{animation:fadeUp .28s ease both}
-input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;outline:none;background:#1c3050}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;cursor:pointer}
-button{font-family:'Outfit',sans-serif;cursor:pointer;border:none;outline:none;transition:opacity .15s}
-button:hover:not(:disabled){opacity:.82}button:disabled{cursor:not-allowed;opacity:.4}
-textarea{font-family:'Outfit',sans-serif;outline:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes glow{0%,100%{box-shadow:0 0 10px ${C.purple}44}50%{box-shadow:0 0 24px ${C.purple}88}}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+.fade{animation:fadeUp .25s ease both}
+.slide{animation:slideUp .3s ease both}
+button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{font-family:'Inter',sans-serif;cursor:pointer;border:none;outline:none}
+textarea,input{font-family:'Inter',sans-serif;outline:none;-webkit-appearance:none}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;
+  background:${C.border2};outline:none;width:100%}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  border-radius:50%;cursor:pointer;border:2px solid ${C.bg}}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;
+  cursor:pointer;border:2px solid ${C.bg};appearance:none}
+.mono{font-family:'JetBrains Mono',monospace}
+.nav-tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 12px;
+  border-radius:10px;border:none;background:none;color:${C.text2};font-size:11px;
+  font-weight:500;transition:all .2s;min-width:60px}
+.nav-tab.active{color:${C.purple2};background:rgba(124,58,237,.12)}
+.nav-tab svg{width:20px;height:20px}
+.card{background:${C.card};border:1px solid ${C.border};border-radius:14px;padding:16px}
+.card2{background:${C.card2};border:1px solid ${C.border};border-radius:10px;padding:12px}
+.tog{position:relative;width:44px;height:24px;border-radius:12px;border:none;
+  transition:background .2s;cursor:pointer;flex-shrink:0}
+.tog-knob{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;
+  background:white;transition:left .2s}
+.chip{padding:8px 14px;border-radius:20px;font-size:13px;font-weight:500;
+  white-space:nowrap;border:1px solid;transition:all .15s;cursor:pointer}
+.bubble-user{background:linear-gradient(135deg,${C.purple},${C.cyan}88);
+  border-radius:18px 18px 4px 18px;padding:12px 16px;font-size:14px;line-height:1.6}
+.bubble-agent{background:${C.card};border:1px solid ${C.border2};
+  border-radius:18px 18px 18px 4px;padding:12px 16px;font-size:14px;line-height:1.6}
+.tx-row{display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;border-bottom:1px solid ${C.border};font-size:12px}
+.tx-row:last-child{border-bottom:none}
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;
+  display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:${C.card};border-radius:24px 24px 0 0;width:100%;max-width:560px;
+  padding:0 0 32px;max-height:90vh;overflow-y:auto}
+.sheet-handle{width:36px;height:4px;background:${C.border2};border-radius:2px;
+  margin:12px auto 20px}
+.spend-bar{height:6px;border-radius:3px;overflow:hidden;background:${C.border}}
+.spend-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.svc-item{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:10px;border:1px solid ${C.border};background:${C.card2};
+  cursor:pointer;transition:border-color .15s;width:100%}
+.stat{background:${C.card};border:1px solid ${C.border};border-radius:12px;
+  padding:14px;text-align:center}
+.msg-input{width:100%;background:${C.card};border:1.5px solid ${C.border2};
+  border-radius:14px;color:${C.text};font-size:15px;padding:12px 16px;
+  resize:none;min-height:48px;max-height:120px;line-height:1.5;
+  transition:border-color .15s}
+.msg-input:focus{border-color:${C.purple}}
+.send-btn{width:48px;height:48px;border-radius:14px;flex-shrink:0;
+  background:linear-gradient(135deg,${C.purple},${C.cyan});
+  display:flex;align-items:center;justify-content:center;font-size:20px}
+.send-btn:disabled{opacity:.4}
+@media(min-width:768px){
+  .desktop-grid{display:grid;grid-template-columns:280px 1fr 250px;height:100vh;overflow:hidden}
+  .mobile-only{display:none!important}
+  .desktop-only{display:flex!important}
+  .desktop-panel{display:flex;flex-direction:column;overflow-y:auto;height:100%}
+}
+@media(max-width:767px){
+  .desktop-only{display:none!important}
+  .mobile-layout{display:flex;flex-direction:column;height:100vh}
+}
 `;
 
 export default function App() {
+  const [tab,    setTab]    = useState("chat");
+  const [catTab, setCatTab] = useState("ai");
+  const [token,  setToken]  = useState("HBAR");
   const [policies, setPols] = useState({
     spendLimit:{enabled:true,hbar:500,usdc:100},
     allowlist:{enabled:true,accounts:["0.0.4567890","0.0.4567891","0.0.8901234","0.0.8901237","0.0.2345679","0.0.2345680","0.0.3456789","0.0.3456790"]},
     approvalThreshold:{enabled:true,hbar:100},
     anomalyDetection:{enabled:true},
   });
-  const [token,  setToken]  = useState("HBAR");
-  const [spend,  setSpend]  = useState({hbar:142.5,usdc:18.0});
-  const [msgs,   setMsgs]   = useState([{id:uid(),role:"agent",time:nowStr(),
-    text:"Hello! I'm xPay — your AI payment agent on Hedera. Connect your wallet (HashPack, Blade, or Kabila) to sign transactions. All payments pass through 4 policy hooks before execution."}]);
+  const [spend,  setSpend]  = useState({hbar:142.5,usdc:18});
+  const [msgs,   setMsgs]   = useState([{id:uid(),role:"agent",time:now(),
+    text:"Hello! I'm xPay — your AI payment agent on Hedera. Connect your wallet to sign transactions with HashPack, Blade, or Kabila. All payments go through 4 policy hooks. Try a preset or type below."}]);
   const [input,  setInput]  = useState("");
   const [busy,   setBusy]   = useState(false);
   const [txLog,  setTxLog]  = useState([]);
   const [modal,  setModal]  = useState(null);
-  const [wModal, setWModal] = useState(false);
+  const [wSheet, setWSheet] = useState(false);
   const [wallet, setWallet] = useState({connected:false,accountId:null,walletName:null,walletIcon:null,balance:null});
   const [signing,setSigning]= useState(false);
-  const [tab,    setTab]    = useState("ai");
-  const msgsRef = useRef(null);
+  const msgsEnd = useRef(null);
 
-  useEffect(()=>{ msgsRef.current?.scrollTo({top:msgsRef.current.scrollHeight,behavior:"smooth"}); },[msgs]);
+  useEffect(()=>{ msgsEnd.current?.scrollIntoView({behavior:"smooth"}); },[msgs]);
 
-  const add = (m) => setMsgs(p=>[...p,{id:uid(),time:nowStr(),...m}]);
+  const add = (m) => setMsgs(p=>[...p,{id:uid(),time:now(),...m}]);
 
-  const connectWallet = (w) => {
-    setWallet({connected:true,accountId:`0.0.${Math.floor(1000000+Math.random()*9000000)}`,
-      walletName:w.name,walletIcon:w.icon,balance:(150+Math.random()*500).toFixed(2)});
-    setWModal(false);
-    add({role:"wallet",text:`🔗 ${w.name} connected. Your wallet will sign approved transactions — xPay never holds your private key.`});
+  const connectW = (w) => {
+    const id = `0.0.${Math.floor(1000000+Math.random()*9000000)}`;
+    setWallet({connected:true,accountId:id,walletName:w.name,walletIcon:w.icon,
+      balance:(200+Math.random()*800).toFixed(2)});
+    setWSheet(false);
+    add({role:"system",text:`${w.icon} ${w.name} connected — ${id}. Your wallet will sign approved transactions.`});
   };
 
-  const disconnectWallet = () => {
+  const disconnectW = () => {
     setWallet({connected:false,accountId:null,walletName:null,walletIcon:null,balance:null});
-    add({role:"wallet",text:"Wallet disconnected."});
+    setWSheet(false);
+    add({role:"system",text:"Wallet disconnected. Server keypair will be used."});
   };
 
   const send = useCallback(async(text)=>{
-    const msg=(text||input).trim();
-    if(!msg||busy) return;
+    const msg=(text||input).trim(); if(!msg||busy) return;
     setInput(""); add({role:"user",text:msg}); setBusy(true);
     try{
-      const r = await callAgent(msg,policies,spend,token);
-      if(r.policyTriggered){
-        const labels={spend_limit:"🚫 SPEND LIMIT TRIGGERED",allowlist:"🚫 ALLOWLIST BLOCKED",
-          approval_threshold:"⏳ APPROVAL REQUIRED",anomaly:"⚠️ ANOMALY DETECTED"};
-        add({role:"policy",pt:r.decision==="approved"?"approved":r.decision==="needs_approval"?"pending":"blocked",
-          text:labels[r.policyTriggered]??"POLICY EVENT",detail:r.violationDetail});
+      const r = await ask(msg,policies,spend,token);
+      if(r.policy){
+        const labels={spend_limit:"🚫 Spend Limit Triggered",allowlist:"🚫 Allowlist Blocked",
+          approval_threshold:"⏳ Approval Required",anomaly:"⚠️ Anomaly Detected"};
+        add({role:"policy",
+          pt:r.decision==="approved"?"approved":r.decision==="needs_approval"?"pending":"blocked",
+          text:labels[r.policy]??"Policy Event",detail:r.detail});
       }
       if(r.decision==="approved"&&r.amount>0){
-        const hash=r.txHash||rHash();
-        setSpend(s=>({...s,[r.currency==="HBAR"?"hbar":"usdc"]:s[r.currency==="HBAR"?"hbar":"usdc"]+r.amount}));
-        setTxLog(l=>[{id:uid(),service:r.serviceName||r.toAccountId,cat:r.serviceCategory,
-          amount:r.amount,currency:r.currency,status:"ok",hash,time:nowStr(),
-          signedBy:wallet.connected?wallet.walletName:"Server keypair"},...l].slice(0,30));
-        add({role:"agent",text:r.agentMessage,card:{amount:r.amount,currency:r.currency,
-          accountId:r.toAccountId,service:r.serviceName,cat:r.serviceCategory,hash,decision:"approved",
-          signedBy:wallet.connected?wallet.walletName:"Server keypair"}});
+        const hash=r.hash||rHash();
+        setSpend(s=>({...s,[r.currency==="HBAR"?"hbar":"usdc"]:+(s[r.currency==="HBAR"?"hbar":"usdc"]+r.amount).toFixed(2)}));
+        setTxLog(l=>[{id:uid(),service:r.service||r.to,cat:r.cat,amount:r.amount,
+          currency:r.currency,status:"ok",hash,time:now(),
+          signedBy:wallet.connected?wallet.walletName:"Server"},...l].slice(0,30));
+        add({role:"agent",text:r.msg,tx:{amount:r.amount,currency:r.currency,
+          service:r.service||r.to,hash,cat:r.cat,ok:true}});
       } else if(r.decision==="needs_approval"){
-        setModal({pid:`pending-${Date.now()}`,amount:r.amount,currency:r.currency,
-          accountId:r.toAccountId,service:r.serviceName,cat:r.serviceCategory,detail:r.violationDetail});
-        add({role:"agent",text:r.agentMessage});
+        setModal({pid:`p-${Date.now()}`,amount:r.amount,currency:r.currency,
+          to:r.to,service:r.service,cat:r.cat,detail:r.detail});
+        add({role:"agent",text:r.msg});
       } else if(r.decision==="blocked"){
-        setTxLog(l=>[{id:uid(),service:r.serviceName||r.toAccountId||"unknown",cat:r.serviceCategory,
-          amount:r.amount,currency:r.currency||token,status:"fail",hash:null,time:nowStr(),
-          policy:r.policyTriggered},...l].slice(0,30));
-        add({role:"agent",text:r.agentMessage});
+        setTxLog(l=>[{id:uid(),service:r.service||r.to||"unknown",cat:r.cat,
+          amount:r.amount,currency:r.currency||token,status:"fail",
+          hash:null,time:now(),policy:r.policy},...l].slice(0,30));
+        add({role:"agent",text:r.msg});
       } else {
-        add({role:"agent",text:r.agentMessage});
+        add({role:"agent",text:r.msg});
       }
-    }catch(e){ add({role:"agent",text:`⚠️ ${e.message||"Network error."}`}); }
+    }catch(e){add({role:"agent",text:`⚠️ ${e.message||"Network error."}`});}
     setBusy(false);
   },[input,busy,policies,spend,token,wallet]);
 
-  const approve = async() => {
-    if(!modal) return;
-    setSigning(true);
-    await new Promise(r=>setTimeout(r,wallet.connected?1500:400));
+  const approve = async()=>{
+    if(!modal) return; setSigning(true);
+    await new Promise(r=>setTimeout(r,wallet.connected?1400:500));
     setSigning(false);
     const hash=rHash();
-    setSpend(s=>({...s,[modal.currency==="HBAR"?"hbar":"usdc"]:s[modal.currency==="HBAR"?"hbar":"usdc"]+modal.amount}));
-    setTxLog(l=>[{id:uid(),service:modal.service||modal.accountId,cat:modal.cat,
-      amount:modal.amount,currency:modal.currency,status:"ok",hash,time:nowStr(),
-      policy:"approval_threshold",signedBy:wallet.connected?wallet.walletName:"Server keypair"},...l].slice(0,30));
-    add({role:"policy",pt:"approved",text:wallet.connected?`✅ SIGNED BY ${wallet.walletName?.toUpperCase()}`:"✅ HUMAN APPROVED"});
-    add({role:"agent",text:`Transaction executed. ${modal.amount} ${modal.currency} sent to ${modal.service??modal.accountId}. TX: ${short(hash)}`,
-      card:{amount:modal.amount,currency:modal.currency,accountId:modal.accountId,
-        service:modal.service,cat:modal.cat,hash,decision:"approved",
-        signedBy:wallet.connected?wallet.walletName:"Operator"}});
+    setSpend(s=>({...s,[modal.currency==="HBAR"?"hbar":"usdc"]:+(s[modal.currency==="HBAR"?"hbar":"usdc"]+modal.amount).toFixed(2)}));
+    setTxLog(l=>[{id:uid(),service:modal.service||modal.to,cat:modal.cat,
+      amount:modal.amount,currency:modal.currency,status:"ok",hash,time:now(),
+      policy:"approval_threshold",signedBy:wallet.connected?wallet.walletName:"Operator"},...l].slice(0,30));
+    add({role:"policy",pt:"approved",text:wallet.connected?`✅ Signed by ${wallet.walletName}`:"✅ Approved by operator"});
+    add({role:"agent",text:`Done. ${modal.amount} ${modal.currency} sent to ${modal.service||modal.to}. TX: ${short(hash)}`,
+      tx:{amount:modal.amount,currency:modal.currency,service:modal.service||modal.to,
+        hash,cat:modal.cat,ok:true}});
     setModal(null);
   };
 
-  const reject = () => {
+  const reject = ()=>{
     if(!modal) return;
     setTxLog(l=>[{id:uid(),service:modal.service||"unknown",cat:modal.cat,
-      amount:modal.amount,currency:modal.currency,status:"fail",hash:null,
-      time:nowStr(),policy:"approval_threshold"},...l].slice(0,30));
-    add({role:"policy",pt:"blocked",text:"❌ REJECTED"});
-    add({role:"agent",text:"Transaction rejected. No funds transferred."});
+      amount:modal.amount,currency:modal.currency,status:"fail",
+      hash:null,time:now(),policy:"approval_threshold"},...l].slice(0,30));
+    add({role:"policy",pt:"blocked",text:"❌ Transaction rejected"});
+    add({role:"agent",text:"Rejected. No funds moved."});
     setModal(null);
   };
 
   const sv=spend[token==="HBAR"?"hbar":"usdc"];
   const sc=policies.spendLimit[token==="HBAR"?"hbar":"usdc"];
   const pct=Math.min(100,(sv/sc)*100);
-  const warn=pct>70;
-  const catD=CATEGORIES[tab];
+  const catD=CATS[catTab];
+  const sentC=txLog.filter(t=>t.status==="ok").length;
+  const blockC=txLog.filter(t=>t.status==="fail").length;
 
-  return(<>
-    <style>{CSS}</style>
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,
-      background:"radial-gradient(ellipse 60% 40% at 10% 0%,#7c3aed20 0%,transparent 55%),radial-gradient(ellipse 45% 35% at 90% 100%,#00d4f510 0%,transparent 55%)"}}/>
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,
-      backgroundImage:"linear-gradient(#00d4f505 1px,transparent 1px),linear-gradient(90deg,#00d4f505 1px,transparent 1px)",backgroundSize:"52px 52px"}}/>
-
-    {wModal&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(4,7,13,.92)",backdropFilter:"blur(16px)",
-        zIndex:600,display:"flex",alignItems:"center",justifyContent:"center"}}
-        onClick={e=>{if(e.target===e.currentTarget)setWModal(false)}}>
-        <div className="fu" style={{background:T.surface,border:`1px solid ${T.border2}`,
-          borderRadius:18,width:400,overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,.85)"}}>
-          <div style={{padding:"18px 22px 14px",borderBottom:`1px solid ${T.border}`,
-            display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:32,height:32,borderRadius:8,
-                background:`linear-gradient(135deg,${T.hedera},${T.accent})`,
-                display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>ℏ</div>
-              <div>
-                <div style={{fontSize:15,fontWeight:700}}>Connect to xPay</div>
-                <div style={{fontSize:11,color:T.muted}}>Choose your Hedera wallet</div>
-              </div>
-            </div>
-            <button onClick={()=>setWModal(false)} style={{background:"none",color:T.muted,
-              fontSize:20,width:32,height:32,borderRadius:"50%",border:`1px solid ${T.border}`}}>×</button>
+  const Header = ()=>(
+    <header style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+      padding:"12px 16px",borderBottom:`1px solid ${C.border}`,
+      background:`${C.bg}ee`,backdropFilter:"blur(12px)",
+      position:"sticky",top:0,zIndex:50}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:34,height:34,borderRadius:10,fontSize:18,
+          background:`linear-gradient(135deg,${C.purple},${C.cyan})`,
+          display:"flex",alignItems:"center",justifyContent:"center",
+          boxShadow:`0 0 16px ${C.purple}66`,animation:"glow 3s infinite",flexShrink:0}}>ℏ</div>
+        <div>
+          <div style={{fontSize:15,fontWeight:700,letterSpacing:"-.01em"}}>xPay</div>
+          <div style={{fontSize:10,color:C.text2,letterSpacing:".08em",textTransform:"uppercase"}}>
+            AI Payment Agent · Hedera
           </div>
+        </div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        {wallet.connected?(
+          <button onClick={()=>setWSheet(true)}
+            style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",
+              borderRadius:20,background:`${C.purple}18`,border:`1px solid ${C.purple2}44`,
+              color:C.purple2,fontSize:12,fontWeight:600}}>
+            <span>{wallet.walletIcon}</span>
+            <span className="mono" style={{fontSize:11}}>{wallet.accountId?.slice(0,10)}…</span>
+          </button>
+        ):(
+          <button onClick={()=>setWSheet(true)}
+            style={{display:"flex",alignItems:"center",gap:6,padding:"7px 14px",
+              borderRadius:20,background:`linear-gradient(135deg,${C.purple},${C.cyan}88)`,
+              color:"white",fontSize:13,fontWeight:600,border:"none"}}>
+            🔗 Connect
+          </button>
+        )}
+        <div style={{padding:"4px 10px",borderRadius:20,background:`${C.green}14`,
+          border:`1px solid ${C.green}30`,color:C.green,fontSize:11,
+          fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>
+          TESTNET
+        </div>
+      </div>
+    </header>
+  );
+
+  const WalletSheet = ()=>(
+    <div className="sheet-overlay" onClick={e=>{if(e.target===e.currentTarget)setWSheet(false)}}>
+      <div className="sheet slide" style={{maxWidth:560}}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"0 20px"}}>
           {wallet.connected?(
-            <div style={{padding:22}}>
-              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-                <div style={{width:44,height:44,borderRadius:12,background:`linear-gradient(135deg,${T.hedera},${T.accent})`,
-                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>{wallet.walletIcon}</div>
+            <>
+              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:20}}>
+                <div style={{width:52,height:52,borderRadius:16,fontSize:28,
+                  background:`linear-gradient(135deg,${C.purple}44,${C.cyan}44)`,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  border:`1px solid ${C.border2}`}}>{wallet.walletIcon}</div>
                 <div>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                    <div style={{width:8,height:8,borderRadius:"50%",background:T.green,boxShadow:`0 0 8px ${T.green}`}}/>
-                    <span style={{fontSize:14,fontWeight:700,color:T.green}}>{wallet.walletName} Connected</span>
+                  <div style={{fontSize:16,fontWeight:700,color:C.green,marginBottom:3}}>
+                    ● {wallet.walletName} Connected
                   </div>
-                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>{wallet.accountId}</div>
+                  <div className="mono" style={{fontSize:12,color:C.text2}}>{wallet.accountId}</div>
                 </div>
               </div>
-              <div style={{background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"12px 16px",marginBottom:16}}>
-                <div style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:".1em",marginBottom:5}}>HBAR Balance</div>
-                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:26,fontWeight:700,color:T.hedera2}}>
-                  {wallet.balance} <span style={{fontSize:14,color:T.muted}}>ℏ</span>
+              <div className="card2" style={{marginBottom:16}}>
+                <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",
+                  letterSpacing:".1em",marginBottom:8}}>HBAR Balance</div>
+                <div style={{fontSize:32,fontWeight:800,color:C.purple2,
+                  fontFamily:"'JetBrains Mono',monospace"}}>
+                  {wallet.balance} <span style={{fontSize:16,color:C.text2}}>ℏ</span>
                 </div>
               </div>
-              {[["💸","Sign HBAR payments","Wallet signs each approved transfer"],
-                ["🛡","Policy enforcement","4 hooks run before your wallet is asked"],
-                ["👁","Human approval","You confirm high-value transactions"],
-                ["🔑","Non-custodial","xPay never holds your private key"],
-              ].map(([icon,title,desc])=>(
-                <div key={title} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
-                  <span style={{fontSize:18,flexShrink:0}}>{icon}</span>
-                  <div><div style={{fontSize:13,fontWeight:600}}>{title}</div>
-                    <div style={{fontSize:11,color:T.muted}}>{desc}</div></div>
-                </div>
-              ))}
-              <button onClick={()=>{disconnectWallet();setWModal(false);}}
-                style={{width:"100%",padding:12,borderRadius:10,marginTop:16,
-                  background:`${T.red}15`,border:`1px solid ${T.red}30`,color:T.red,fontSize:14,fontWeight:600}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+                {[["💸","Sign payments","Wallet signs each txn"],
+                  ["🔑","Non-custodial","xPay never has your key"],
+                  ["🛡","Policy gates","4 hooks before signing"],
+                  ["👁","You decide","Approve high-value txns"],
+                ].map(([icon,t,d])=>(
+                  <div key={t} className="card2" style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                    <span style={{fontSize:20,flexShrink:0}}>{icon}</span>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{t}</div>
+                      <div style={{fontSize:11,color:C.text2,lineHeight:1.4}}>{d}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={disconnectW}
+                style={{width:"100%",padding:14,borderRadius:12,fontSize:15,fontWeight:600,
+                  background:`${C.red}14`,border:`1px solid ${C.red}30`,color:C.red}}>
                 Disconnect Wallet
               </button>
-            </div>
+            </>
           ):(
-            <div style={{padding:18}}>
-              <div style={{fontSize:12,color:T.muted,marginBottom:14,lineHeight:1.6}}>
-                Connect any Hedera-compatible wallet. Scan the QR code with your wallet app.
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:12}}>
+            <>
+              <h2 style={{fontSize:20,fontWeight:700,marginBottom:6}}>Connect Wallet</h2>
+              <p style={{fontSize:14,color:C.text2,marginBottom:20,lineHeight:1.6}}>
+                Choose your Hedera wallet. Scan the QR code in your wallet app to connect.
+              </p>
+              <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
                 {WALLETS.map(w=>(
-                  <button key={w.name} onClick={()=>connectWallet(w)}
-                    style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",
-                      borderRadius:11,background:T.surface2,border:`1px solid ${T.border2}`,
-                      textAlign:"left",width:"100%"}}>
-                    <div style={{width:40,height:40,borderRadius:10,flexShrink:0,
-                      background:`${w.color}22`,border:`1px solid ${w.color}44`,
-                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{w.icon}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:700}}>{w.name}</div>
-                      <div style={{fontSize:11,color:T.muted}}>{w.desc}</div>
+                  <button key={w.name} onClick={()=>connectW(w)}
+                    style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",
+                      borderRadius:14,background:C.card2,border:`1px solid ${C.border}`,
+                      textAlign:"left",width:"100%",transition:"border-color .15s"}}>
+                    <div style={{width:44,height:44,borderRadius:12,fontSize:24,
+                      background:`${w.color}18`,border:`1px solid ${w.color}33`,
+                      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      {w.icon}
                     </div>
-                    <div style={{fontSize:18,color:T.muted}}>→</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>{w.name}</div>
+                      <div style={{fontSize:12,color:C.text2}}>Tap to connect via WalletConnect 2.0</div>
+                    </div>
+                    <span style={{color:C.text2,fontSize:18}}>›</span>
                   </button>
                 ))}
               </div>
-              <div style={{fontSize:9,color:T.muted,textAlign:"center",fontFamily:"'JetBrains Mono',monospace"}}>
-                WalletConnect 2.0 · HIP-820 · @hashgraph/hedera-wallet-connect@2.1.3
+              <div className="mono" style={{fontSize:11,color:C.text2,textAlign:"center",lineHeight:1.6}}>
+                @hashgraph/hedera-wallet-connect@2.1.3 · HIP-820
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
-    )}
+    </div>
+  );
 
-    {modal&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(4,7,13,.92)",backdropFilter:"blur(16px)",
-        zIndex:500,display:"flex",alignItems:"center",justifyContent:"center"}}>
-        <div className="fu" style={{background:T.surface,border:`1px solid ${T.border2}`,
-          borderRadius:16,padding:28,width:420,boxShadow:"0 30px 80px rgba(0,0,0,.8)"}}>
-          <div style={{fontSize:17,fontWeight:800,marginBottom:6}}>⏳ Approval Required</div>
-          <div style={{fontSize:12,color:T.muted,marginBottom:18,lineHeight:1.5}}>
-            {wallet.connected?`${wallet.walletName} will show a signing prompt.`:"No wallet connected — server keypair will sign."}
+  const ApprovalSheet = ()=>(
+    <div className="sheet-overlay">
+      <div className="sheet slide" style={{maxWidth:560}}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"0 20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+            <span style={{fontSize:28}}>⏳</span>
+            <h2 style={{fontSize:20,fontWeight:700}}>Approval Required</h2>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
-            background:wallet.connected?`${T.hedera}18`:`${T.border}22`,
-            border:`1px solid ${wallet.connected?T.hedera2:T.border}`,borderRadius:9,marginBottom:16}}>
-            <span style={{fontSize:18}}>{wallet.connected?wallet.walletIcon??"🔗":"🖥"}</span>
-            <div>
-              <div style={{fontSize:12,fontWeight:700,color:wallet.connected?T.hedera2:T.muted}}>
-                {wallet.connected?`Signing with ${wallet.walletName}`:"Signing with server keypair"}
+          <p style={{fontSize:13,color:C.text2,marginBottom:20,lineHeight:1.6}}>
+            {wallet.connected
+              ? `${wallet.walletName} will prompt you to sign this transaction.`
+              : "This transfer needs manual approval. Connect a wallet to sign directly."}
+          </p>
+          <div style={{padding:"12px 14px",borderRadius:12,marginBottom:16,
+            background:wallet.connected?`${C.purple}12`:`${C.border}22`,
+            border:`1px solid ${wallet.connected?C.purple2:C.border}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:22}}>{wallet.connected?wallet.walletIcon??"🔗":"🖥"}</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,
+                  color:wallet.connected?C.purple2:C.text2}}>
+                  {wallet.connected?`Signing with ${wallet.walletName}`:"Server keypair signing"}
+                </div>
+                {wallet.connected&&<div className="mono" style={{fontSize:11,color:C.text2}}>{wallet.accountId}</div>}
               </div>
-              {wallet.connected&&<div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:T.muted}}>{wallet.accountId}</div>}
             </div>
           </div>
-          {[["Service",modal.service??"Unknown"],["Amount",`${modal.amount} ${modal.currency}`],
-            ["Account",modal.accountId],["Reason",modal.detail??"High-value transfer"]
-          ].map(([k,v])=>(
-            <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",
-              borderBottom:`1px solid ${T.border}`,fontSize:13}}>
-              <span style={{color:T.muted}}>{k}</span>
-              <span style={{color:k==="Amount"?T.amber:T.text,
-                fontFamily:k==="Account"?"'JetBrains Mono',monospace":"inherit",
-                fontSize:k==="Account"?10:13,fontWeight:k==="Amount"?700:400}}>{v}</span>
-            </div>
-          ))}
+          <div className="card2" style={{marginBottom:16}}>
+            {[["Service",modal?.service??"Unknown"],
+              ["Amount",`${modal?.amount} ${modal?.currency}`],
+              ["Account",modal?.to],
+              ["Reason",modal?.detail??"High-value transfer"],
+            ].map(([k,v])=>(
+              <div key={k} style={{display:"flex",justifyContent:"space-between",
+                alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.border}`}}>
+                <span style={{fontSize:13,color:C.text2}}>{k}</span>
+                <span style={{fontSize:k==="Amount"?16:13,fontWeight:k==="Amount"?700:500,
+                  color:k==="Amount"?C.amber:C.text,
+                  fontFamily:k==="Account"?"'JetBrains Mono',monospace":"Inter",
+                  maxWidth:200,textAlign:"right",wordBreak:"break-all"}}>{v}</span>
+              </div>
+            ))}
+          </div>
           {!wallet.connected&&(
-            <div style={{marginTop:12,padding:"10px 14px",background:`${T.hedera}12`,
-              border:`1px solid ${T.hedera}30`,borderRadius:8,fontSize:12,color:T.hedera2}}>
-              💡 <button onClick={()=>{setModal(null);setWModal(true);}}
-                style={{background:"none",color:T.hedera2,fontSize:12,fontWeight:700,
-                  textDecoration:"underline",padding:0}}>Connect a wallet</button> to sign this yourself.
-            </div>
+            <button onClick={()=>{setModal(null);setWSheet(true);}}
+              style={{width:"100%",padding:12,borderRadius:12,marginBottom:12,
+                background:`${C.purple}14`,border:`1px solid ${C.purple2}44`,
+                color:C.purple2,fontSize:14,fontWeight:600}}>
+              🔗 Connect Wallet to Sign
+            </button>
           )}
-          <div style={{display:"flex",gap:10,marginTop:18}}>
-            <button onClick={reject} disabled={signing}
-              style={{flex:1,padding:12,borderRadius:9,background:T.surface2,
-                border:`1px solid ${T.border2}`,color:T.muted,fontSize:14,fontWeight:600}}>Reject</button>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <button onClick={reject}
+              style={{padding:14,borderRadius:12,background:C.card2,
+                border:`1px solid ${C.border}`,color:C.text2,fontSize:15,fontWeight:600}}>
+              Reject
+            </button>
             <button onClick={approve} disabled={signing}
-              style={{flex:1,padding:12,borderRadius:9,border:"none",
-                background:wallet.connected?T.hedera:T.green,
-                color:wallet.connected?"white":"#04070d",fontSize:14,fontWeight:800,
-                display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:700,
+                background:wallet.connected?`linear-gradient(135deg,${C.purple},${C.cyan}88)`:`${C.green}cc`,
+                color:"white",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               {signing
-                ?<><div style={{width:14,height:14,border:"2px solid white",borderTopColor:"transparent",
-                    borderRadius:"50%",animation:"spin .7s linear infinite"}}/>Signing…</>
-                :wallet.connected?`Sign with ${wallet.walletName}`:"✓ Approve"}
+                ?<><div style={{width:16,height:16,border:"2.5px solid white",
+                    borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+                  Signing…</>
+                :wallet.connected?`Sign`:`Approve`}
             </button>
           </div>
         </div>
       </div>
-    )}
+    </div>
+  );
 
-    <div style={{display:"grid",gridTemplateRows:"58px 1fr",height:"100vh",position:"relative",zIndex:1}}>
-      <header style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-        padding:"0 20px",borderBottom:`1px solid ${T.border}`,
-        background:"rgba(4,7,13,.92)",backdropFilter:"blur(16px)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:11}}>
-          <div style={{width:36,height:36,borderRadius:9,fontSize:20,
-            background:`linear-gradient(135deg,${T.hedera},${T.accent})`,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            boxShadow:`0 0 18px ${T.hedera}66`,animation:"glow 3s infinite"}}>ℏ</div>
-          <div>
-            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700}}>xPay</div>
-            <div style={{fontSize:10,color:T.muted,letterSpacing:".1em",textTransform:"uppercase"}}>
-              AI Payment Agent · Hedera · WalletConnect 2.0
+  const PolicyPanel = ()=>(
+    <div style={{padding:"0 16px 100px",overflowY:"auto"}}>
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",
+          letterSpacing:".1em",marginBottom:8}}>Payment Token</div>
+        <div style={{display:"flex",gap:8}}>
+          {["HBAR","USDC"].map(t=>(
+            <button key={t} onClick={()=>setToken(t)}
+              style={{flex:1,padding:"10px 0",borderRadius:12,fontSize:14,fontWeight:700,
+                fontFamily:"'JetBrains Mono',monospace",
+                border:`1.5px solid ${token===t?(t==="HBAR"?C.purple2:C.cyan):C.border}`,
+                background:token===t?`${t==="HBAR"?C.purple:C.cyan}18`:C.card2,
+                color:token===t?(t==="HBAR"?C.purple2:C.cyan):C.text2}}>
+              {t==="HBAR"?"ℏ HBAR":"＄ USDC"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",
+          letterSpacing:".1em",marginBottom:14}}>Active Policy Hooks</div>
+        {[{k:"spendLimit",l:"Spend Limit",d:"Daily cap enforcement"},
+          {k:"allowlist",l:"Counterparty Allowlist",d:"Approved accounts only"},
+          {k:"approvalThreshold",l:"Human Approval",d:"Gate high-value HBAR"},
+          {k:"anomalyDetection",l:"Anomaly Detection",d:"Flag suspicious patterns"},
+        ].map(({k,l,d})=>(
+          <div key={k} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+            paddingBottom:14,marginBottom:14,borderBottom:`1px solid ${C.border}`}}>
+            <div>
+              <div style={{fontSize:14,fontWeight:600,marginBottom:2}}>{l}</div>
+              <div style={{fontSize:12,color:C.text2}}>{d}</div>
+            </div>
+            <button className="tog"
+              style={{background:policies[k].enabled?C.green:C.border2}}
+              onClick={()=>setPols(p=>({...p,[k]:{...p[k],enabled:!p[k].enabled}}))}>
+              <div className="tog-knob" style={{left:policies[k].enabled?22:3}}/>
+            </button>
+          </div>
+        ))}
+      </div>
+      {policies.spendLimit.enabled&&(
+        <div className="card" style={{marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontSize:13,color:C.text2}}>Daily Cap</div>
+            <div className="mono" style={{fontSize:14,fontWeight:700,color:C.cyan}}>
+              {policies.spendLimit[token==="HBAR"?"hbar":"usdc"]} {token}
             </div>
           </div>
+          <input type="range" min={50} max={1000} step={50}
+            value={policies.spendLimit[token==="HBAR"?"hbar":"usdc"]}
+            onChange={e=>setPols(p=>({...p,spendLimit:{...p.spendLimit,
+              [token==="HBAR"?"hbar":"usdc"]:+e.target.value}}))}
+            style={{accentColor:C.cyan}}/>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          {wallet.connected
-            ?<div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:7,height:7,borderRadius:"50%",background:T.green,boxShadow:`0 0 7px ${T.green}`}}/>
-                <span style={{fontSize:18}}>{wallet.walletIcon}</span>
-                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:T.green}}>{wallet.accountId}</span>
-                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:T.hedera2,
-                  background:`${T.hedera}15`,padding:"2px 8px",borderRadius:4}}>{wallet.balance} ℏ</span>
-                <button onClick={()=>setWModal(true)} style={{fontSize:11,padding:"3px 10px",borderRadius:5,
-                  background:`${T.hedera}20`,border:`1px solid ${T.hedera2}44`,color:T.hedera2}}>Wallet</button>
+      )}
+      {policies.approvalThreshold.enabled&&(
+        <div className="card" style={{marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontSize:13,color:C.text2}}>Approval Threshold</div>
+            <div className="mono" style={{fontSize:14,fontWeight:700,color:C.amber}}>
+              {policies.approvalThreshold.hbar} ℏ
+            </div>
+          </div>
+          <input type="range" min={10} max={500} step={10}
+            value={policies.approvalThreshold.hbar}
+            onChange={e=>setPols(p=>({...p,approvalThreshold:{...p.approvalThreshold,hbar:+e.target.value}}))}
+            style={{accentColor:C.amber}}/>
+        </div>
+      )}
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",letterSpacing:".1em",marginBottom:12}}>
+          Wallet
+        </div>
+        {wallet.connected?(
+          <>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <span style={{fontSize:22}}>{wallet.walletIcon}</span>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:C.green}}>{wallet.walletName}</div>
+                <div className="mono" style={{fontSize:11,color:C.text2}}>{wallet.accountId}</div>
               </div>
-            :<button onClick={()=>setWModal(true)} style={{display:"flex",alignItems:"center",gap:7,
-                fontSize:12,fontWeight:700,padding:"7px 16px",borderRadius:8,
-                border:`1px solid ${T.hedera2}`,background:`${T.hedera}22`,color:T.hedera2,
-                animation:"wp 2.5s ease-in-out infinite"}}>🔗 Connect Wallet</button>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:12,
+              padding:"10px 12px",background:C.card2,borderRadius:10}}>
+              <span style={{fontSize:13,color:C.text2}}>Balance</span>
+              <span className="mono" style={{fontSize:14,fontWeight:700,color:C.purple2}}>{wallet.balance} ℏ</span>
+            </div>
+            <button onClick={()=>setWSheet(true)}
+              style={{width:"100%",padding:11,borderRadius:10,fontSize:13,fontWeight:600,
+                background:`${C.purple}14`,border:`1px solid ${C.purple2}33`,color:C.purple2}}>
+              Manage Wallet
+            </button>
+          </>
+        ):(
+          <>
+            <p style={{fontSize:13,color:C.text2,marginBottom:12,lineHeight:1.5}}>
+              Connect HashPack, Blade, or Kabila to sign transactions directly from your wallet.
+            </p>
+            <button onClick={()=>setWSheet(true)}
+              style={{width:"100%",padding:13,borderRadius:12,fontSize:15,fontWeight:700,
+                background:`linear-gradient(135deg,${C.purple},${C.cyan}88)`,
+                border:"none",color:"white"}}>
+              🔗 Connect Wallet
+            </button>
+          </>
+        )}
+      </div>
+      <div>
+        <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",letterSpacing:".1em",marginBottom:10}}>
+          Service Catalog
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
+          {Object.entries(CATS).map(([k,c])=>(
+            <button key={k} onClick={()=>setCatTab(k)}
+              style={{padding:"8px 6px",borderRadius:10,fontSize:13,fontWeight:600,
+                border:`1.5px solid ${catTab===k?c.color:C.border}`,
+                background:catTab===k?c.bg:C.card2,color:catTab===k?c.color:C.text2}}>
+              {c.icon} {c.label}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {Object.entries(catD.svcs).map(([id,svc])=>{
+            const allowed=policies.allowlist.accounts.includes(id);
+            return(
+              <button key={id} className="svc-item"
+                style={{borderColor:allowed?catD.bd:C.border}}
+                onClick={()=>allowed
+                  ?send(`Pay ${svc.p} to ${svc.n} (${id}) for services`)
+                  :setPols(p=>({...p,allowlist:{...p.allowlist,accounts:[...p.allowlist.accounts,id]}}))}>
+                <span style={{fontSize:20,flexShrink:0}}>{svc.i}</span>
+                <div style={{flex:1,textAlign:"left"}}>
+                  <div style={{fontSize:13,fontWeight:600}}>{svc.n}</div>
+                  <div style={{fontSize:12,color:C.text2}}>{svc.p}</div>
+                </div>
+                {allowed
+                  ?<span style={{fontSize:12,color:C.green,fontWeight:700}}>✓</span>
+                  :<span style={{fontSize:11,color:C.text2,background:C.border,
+                      padding:"2px 8px",borderRadius:6}}>+ADD</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const ChatPanel = ()=>(
+    <div style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
+      <div style={{padding:"10px 16px",borderBottom:`1px solid ${C.border}`,
+        display:"flex",alignItems:"center",gap:10,background:C.card,flexShrink:0}}>
+        <div style={{width:36,height:36,borderRadius:10,fontSize:20,flexShrink:0,
+          background:`linear-gradient(135deg,${C.purple},${C.cyan})`,
+          display:"flex",alignItems:"center",justifyContent:"center",
+          boxShadow:`0 0 14px ${C.purple}55`}}>🤖</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:700}}>xPay Agent</div>
+          <div style={{fontSize:11,color:C.green}}>
+            ● v3.8.2 · {wallet.connected?`${wallet.walletName} ✓`:"No wallet"}
+          </div>
+        </div>
+        {busy&&<div style={{display:"flex",alignItems:"center",gap:6,
+          fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.amber,
+          background:`${C.amber}12`,border:`1px solid ${C.amber}30`,
+          padding:"4px 10px",borderRadius:20}}>
+          <div style={{width:8,height:8,border:`2px solid ${C.amber}`,
+            borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>
+          Thinking
+        </div>}
+      </div>
+      <div style={{padding:"10px 16px",borderBottom:`1px solid ${C.border}`,
+        display:"flex",gap:8,overflowX:"auto",flexShrink:0,
+        scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+        {PRESETS.map(p=>{
+          const c=p.c?CATS[p.c]:null;
+          return(
+            <button key={p.l} onClick={()=>!busy&&send(p.m)} disabled={busy}
+              className="chip"
+              style={{borderColor:c?c.bd:C.border,background:c?c.bg:C.card2,
+                color:c?c.color:C.text2,fontSize:12,opacity:busy?.5:1}}>
+              {p.l}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"16px",
+        display:"flex",flexDirection:"column",gap:12,
+        WebkitOverflowScrolling:"touch"}}>
+        {msgs.map(m=>{
+          if(m.role==="system")return(
+            <div key={m.id} className="fade" style={{alignSelf:"center",
+              background:`${C.purple}10`,border:`1px solid ${C.purple}25`,
+              borderRadius:12,padding:"8px 14px",fontSize:12,color:C.purple2,
+              maxWidth:"90%",textAlign:"center",lineHeight:1.5}}>{m.text}</div>
+          );
+          if(m.role==="policy"){
+            const pc=m.pt==="approved"?C.green:m.pt==="blocked"?C.red:C.amber;
+            return(
+              <div key={m.id} className="fade" style={{alignSelf:"center",
+                display:"flex",flexDirection:"column",alignItems:"center",gap:4,maxWidth:"90%"}}>
+                <div style={{background:`${pc}10`,border:`1px solid ${pc}30`,
+                  borderRadius:20,padding:"6px 16px",fontSize:12,
+                  color:pc,fontWeight:600}}>{m.text}</div>
+                {m.detail&&<div style={{fontSize:11,color:C.text2,textAlign:"center"}}>{m.detail}</div>}
+              </div>
+            );
           }
-          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:T.green,
-            padding:"3px 10px",borderRadius:4,background:`${T.green}10`,border:`1px solid ${T.green}22`}}>TESTNET</span>
-        </div>
-      </header>
-
-      <div style={{display:"grid",gridTemplateColumns:"298px 1fr 264px",overflow:"hidden"}}>
-        <aside style={{borderRight:`1px solid ${T.border}`,overflowY:"auto",padding:14,
-          display:"flex",flexDirection:"column",gap:12}}>
-          <PT c={T.accent}>Policy Configuration</PT>
-          <div>
-            <FL>Payment Token</FL>
-            <div style={{display:"flex",gap:6}}>
-              {["HBAR","USDC"].map(t=>(
-                <button key={t} onClick={()=>setToken(t)} style={{flex:1,padding:"7px 0",borderRadius:7,
-                  fontSize:12,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
-                  border:`1px solid ${token===t?(t==="HBAR"?T.hedera2:T.accent):T.border}`,
-                  background:token===t?`${t==="HBAR"?T.hedera:T.accent}18`:T.surface2,
-                  color:token===t?(t==="HBAR"?T.hedera2:T.accent):T.muted}}>
-                  {t==="HBAR"?"ℏ HBAR":"＄USDC"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <CCard>
-            <FL>Active Policy Hooks</FL>
-            {[{k:"spendLimit",l:"Spend Limit",d:"Daily cap enforcement"},
-              {k:"allowlist",l:"Counterparty Allowlist",d:"Approved accounts only"},
-              {k:"approvalThreshold",l:"Human Approval",d:"Gate high-value HBAR"},
-              {k:"anomalyDetection",l:"Anomaly Detection",d:"Flag suspicious patterns"},
-            ].map(({k,l,d})=>(
-              <div key={k} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                padding:"9px 0",borderBottom:`1px solid ${T.border}`}}>
-                <div>
-                  <div style={{fontSize:13,fontWeight:600}}>{l}</div>
-                  <div style={{fontSize:10,color:T.muted,fontFamily:"'JetBrains Mono',monospace",marginTop:1}}>{d}</div>
-                </div>
-                <Tog on={policies[k].enabled} onChange={()=>setPols(p=>({...p,[k]:{...p[k],enabled:!p[k].enabled}}))}/>
-              </div>
-            ))}
-          </CCard>
-          {policies.spendLimit.enabled&&(
-            <CCard><FL>Daily Cap — {token}</FL>
-              <SRow val={policies.spendLimit[token==="HBAR"?"hbar":"usdc"]} min={50} max={1000} step={50}
-                c={T.accent} lbl={`${policies.spendLimit[token==="HBAR"?"hbar":"usdc"]} ${token}`}
-                set={v=>setPols(p=>({...p,spendLimit:{...p.spendLimit,[token==="HBAR"?"hbar":"usdc"]:v}}))}/></CCard>
-          )}
-          {policies.approvalThreshold.enabled&&(
-            <CCard><FL>Approval Threshold (HBAR)</FL>
-              <SRow val={policies.approvalThreshold.hbar} min={10} max={500} step={10}
-                c={T.amber} lbl={`${policies.approvalThreshold.hbar} ℏ`}
-                set={v=>setPols(p=>({...p,approvalThreshold:{...p.approvalThreshold,hbar:v}}))}/></CCard>
-          )}
-          <CCard>
-            <FL>Wallet</FL>
-            {wallet.connected?(
-              <div>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                  <div style={{width:7,height:7,borderRadius:"50%",background:T.green,boxShadow:`0 0 6px ${T.green}`}}/>
-                  <span style={{fontSize:13,fontWeight:700,color:T.green}}>{wallet.walletIcon} {wallet.walletName}</span>
-                </div>
-                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,
-                  background:T.surface2,padding:"5px 8px",borderRadius:5,marginBottom:7}}>{wallet.accountId}</div>
-                <div style={{fontSize:11,color:T.muted,lineHeight:1.5,marginBottom:8}}>
-                  ✓ Approval transactions signed by your wallet
-                </div>
-                <button onClick={()=>setWModal(true)} style={{width:"100%",padding:"7px 0",borderRadius:7,
-                  fontSize:12,fontWeight:600,background:`${T.hedera}18`,border:`1px solid ${T.hedera2}44`,color:T.hedera2}}>
-                  Manage Wallet
-                </button>
-              </div>
-            ):(
-              <div>
-                <div style={{fontSize:12,color:T.muted,marginBottom:10,lineHeight:1.5}}>
-                  Connect HashPack, Blade, Kabila, or MetaMask to sign transactions directly.
-                </div>
-                <button onClick={()=>setWModal(true)} style={{width:"100%",padding:9,borderRadius:8,
-                  fontWeight:700,fontSize:13,background:`linear-gradient(135deg,${T.hedera},${T.hedera2}66)`,
-                  border:`1px solid ${T.hedera2}`,color:"white"}}>🔗 Connect Wallet</button>
-              </div>
-            )}
-          </CCard>
-          <div>
-            <FL>Service Catalog</FL>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:8}}>
-              {Object.entries(CATEGORIES).map(([k,c])=>(
-                <button key={k} onClick={()=>setTab(k)} style={{padding:"5px 4px",borderRadius:6,
-                  fontSize:11,fontWeight:600,border:`1px solid ${tab===k?c.color:T.border}`,
-                  background:tab===k?c.bg:T.surface2,color:tab===k?c.color:T.muted}}>
-                  {c.icon} {c.label}
-                </button>
-              ))}
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:5}}>
-              {Object.entries(catD.services).map(([id,svc])=>{
-                const allowed=policies.allowlist.accounts.includes(id);
-                return(
-                  <div key={id}
-                    onClick={()=>allowed
-                      ?send(`Pay ${svc.price} to ${svc.name} (${id}) for ${svc.desc}`)
-                      :setPols(p=>({...p,allowlist:{...p.allowlist,accounts:[...p.allowlist.accounts,id]}}))}
-                    style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",
-                      background:T.surface2,border:`1px solid ${allowed?catD.border:T.border}`,
-                      borderRadius:8,cursor:"pointer"}}>
-                    <span style={{fontSize:16,flexShrink:0}}>{svc.icon}</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,display:"flex",justifyContent:"space-between"}}>
-                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:95}}>{svc.name}</span>
-                        {allowed
-                          ?<span style={{fontSize:9,color:T.green,background:`${T.green}15`,padding:"1px 6px",borderRadius:3,flexShrink:0}}>✓</span>
-                          :<span style={{fontSize:9,color:T.muted,background:T.faint,padding:"1px 6px",borderRadius:3,flexShrink:0}}>+ADD</span>}
-                      </div>
-                      <div style={{fontSize:10,color:T.muted}}>{svc.price}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </aside>
-
-        <div style={{display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,
-            display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:40,height:40,borderRadius:"50%",flexShrink:0,
-              background:`linear-gradient(135deg,${T.hedera},${T.accent})`,
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,
-              boxShadow:`0 0 20px ${T.hedera}55`}}>🤖</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:700}}>xPay Agent</div>
-              <div style={{fontSize:11,color:T.green}}>
-                ● hedera-agent-kit v3.8.2 · {wallet.connected?`${wallet.walletName} connected`:"No wallet — server keypair"}
-              </div>
-            </div>
-            {busy&&<div style={{display:"flex",alignItems:"center",gap:7,
-              fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:T.amber,
-              background:`${T.amber}12`,border:`1px solid ${T.amber}28`,padding:"4px 12px",borderRadius:5}}>
-              <div style={{width:10,height:10,border:`2px solid ${T.amber}`,borderTopColor:"transparent",
-                borderRadius:"50%",animation:"spin .8s linear infinite"}}/>EVALUATING
-            </div>}
-          </div>
-          <div style={{padding:"7px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:5,flexWrap:"wrap"}}>
-            {PRESETS.map(p=>{
-              const c=p.cat?CATEGORIES[p.cat]:null;
-              return(
-                <button key={p.label} onClick={()=>!busy&&send(p.msg)} disabled={busy}
-                  style={{fontSize:11,padding:"4px 11px",borderRadius:20,whiteSpace:"nowrap",
-                    border:`1px solid ${c?c.border:T.border}`,background:c?c.bg:T.surface2,color:c?c.color:T.muted}}>
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-          <div ref={msgsRef} style={{flex:1,overflowY:"auto",padding:"16px 18px",
-            display:"flex",flexDirection:"column",gap:11}}>
-            {msgs.map(m=>{
-              if(m.role==="policy"){
-                const c=m.pt==="approved"?T.green:m.pt==="blocked"?T.red:T.amber;
-                return(
-                  <div key={m.id} className="fu" style={{alignSelf:"center",display:"flex",
-                    flexDirection:"column",alignItems:"center",gap:3,maxWidth:"88%"}}>
-                    <div style={{background:`${c}0d`,border:`1px solid ${c}30`,borderRadius:7,
-                      padding:"6px 16px",fontSize:11,color:c,fontFamily:"'JetBrains Mono',monospace",
-                      fontWeight:500,display:"flex",gap:10}}>
-                      <span>{m.text}</span><span style={{opacity:.5,fontSize:9}}>{m.time}</span>
-                    </div>
-                    {m.detail&&<div style={{fontSize:10,color:T.muted,textAlign:"center",maxWidth:340}}>{m.detail}</div>}
-                  </div>
-                );
-              }
-              if(m.role==="wallet"){
-                return(
-                  <div key={m.id} className="fu" style={{alignSelf:"center",
-                    background:`${T.hedera}10`,border:`1px solid ${T.hedera}30`,
-                    borderRadius:8,padding:"7px 16px",fontSize:11,color:T.hedera2,
-                    maxWidth:"88%",textAlign:"center"}}>{m.text}</div>
-                );
-              }
-              const isU=m.role==="user";
-              return(
-                <div key={m.id} className="fu" style={{alignSelf:isU?"flex-end":"flex-start",maxWidth:"84%"}}>
-                  <div style={{padding:"11px 15px",lineHeight:1.65,fontSize:13,
-                    borderRadius:isU?"14px 14px 3px 14px":"14px 14px 14px 3px",
-                    background:isU?`linear-gradient(135deg,${T.hedera},#0077aa)`:T.surface,
-                    border:isU?"none":`1px solid ${T.border2}`}}>
-                    {m.text}
-                    {m.card&&m.card.amount>0&&(
-                      <div style={{background:T.surface2,border:`1px solid ${T.border}`,borderRadius:8,
-                        padding:11,marginTop:10,fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>
-                        {m.card.cat&&(
-                          <div style={{marginBottom:6,display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:13}}>{CATEGORIES[m.card.cat]?.icon}</span>
-                            <span style={{fontSize:10,color:CATEGORIES[m.card.cat]?.color,
-                              fontWeight:600,letterSpacing:".06em",textTransform:"uppercase"}}>
-                              {CATEGORIES[m.card.cat]?.label}
-                            </span>
-                          </div>
-                        )}
-                        {[["Status",m.card.decision==="approved"?"✓ EXECUTED":"✗ BLOCKED",
-                            m.card.decision==="approved"?T.green:T.red],
-                          ["Service",m.card.service??m.card.accountId,T.text],
-                          ["Amount",`${m.card.amount} ${m.card.currency}`,T.amber],
-                          ["Signed by",m.card.signedBy??"Server keypair",T.hedera2],
-                          ...(m.card.hash?[["TX",short(m.card.hash),T.muted]]:[]),
-                        ].map(([k,v,c])=>(
-                          <div key={k} style={{display:"flex",justifyContent:"space-between",
-                            padding:"4px 0",borderBottom:`1px solid ${T.border}`,fontSize:10}}>
-                            <span style={{color:T.muted}}>{k}</span>
-                            <span style={{color:c,fontWeight:k==="Status"||k==="Amount"?700:400}}>{v}</span>
-                          </div>
-                        ))}
+          const isUser=m.role==="user";
+          return(
+            <div key={m.id} className="fade"
+              style={{alignSelf:isUser?"flex-end":"flex-start",maxWidth:"88%"}}>
+              <div className={isUser?"bubble-user":"bubble-agent"}>
+                {m.text}
+                {m.tx&&m.tx.amount>0&&(
+                  <div style={{background:C.card2,border:`1px solid ${C.border}`,
+                    borderRadius:10,padding:12,marginTop:10}}>
+                    {m.tx.cat&&(
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                        <span style={{fontSize:14}}>{CATS[m.tx.cat]?.icon}</span>
+                        <span style={{fontSize:11,color:CATS[m.tx.cat]?.color,fontWeight:600,
+                          textTransform:"uppercase",letterSpacing:".06em"}}>{CATS[m.tx.cat]?.label}</span>
                       </div>
                     )}
+                    {[["Status",m.tx.ok?"✓ Executed":"✗ Blocked",m.tx.ok?C.green:C.red],
+                      ["Service",m.tx.service||"—",C.text],
+                      ["Amount",`${m.tx.amount} ${m.tx.currency}`,C.amber],
+                      ...(m.tx.hash?[["TX",short(m.tx.hash),C.text2]]:[]),
+                    ].map(([k,v,c])=>(
+                      <div key={k} className="tx-row">
+                        <span style={{color:C.text2,fontSize:12}}>{k}</span>
+                        <span style={{color:c,fontSize:12,fontWeight:k==="Status"||k==="Amount"?700:500,
+                          fontFamily:k==="TX"?"'JetBrains Mono',monospace":"Inter"}}>{v}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{fontSize:10,color:T.muted,marginTop:3,padding:"0 4px",
-                    textAlign:isU?"right":"left"}}>{m.time}</div>
-                </div>
-              );
-            })}
-            {busy&&(
-              <div className="fu" style={{alignSelf:"flex-start",padding:"11px 16px",
-                borderRadius:"14px 14px 14px 3px",background:T.surface,
-                border:`1px solid ${T.border2}`,fontSize:13,color:T.muted,
-                display:"flex",gap:8,alignItems:"center"}}>
-                {[0,1,2].map(i=>(
-                  <div key={i} style={{width:5,height:5,borderRadius:"50%",background:T.muted,
-                    animation:`pulse 1.2s ${i*.22}s infinite`}}/>
-                ))}
-                Evaluating policies…
+                )}
               </div>
-            )}
-          </div>
-          <div style={{padding:"12px 16px",borderTop:`1px solid ${T.border}`,
-            display:"flex",gap:9,alignItems:"flex-end"}}>
-            <textarea value={input} onChange={e=>setInput(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
-              placeholder={`e.g. "Pay 50 HBAR to OpenAI" or "Scan my contract with CertiK"`}
-              rows={1} style={{flex:1,background:T.surface,border:`1px solid ${T.border2}`,
-                borderRadius:9,color:T.text,fontSize:13,padding:"10px 14px",
-                resize:"none",minHeight:42,maxHeight:110,lineHeight:1.5}}/>
-            <button onClick={()=>send()} disabled={busy||!input.trim()}
-              style={{padding:"0 20px",background:`linear-gradient(135deg,${T.hedera},${T.accent})`,
-                borderRadius:9,color:"white",fontSize:13,fontWeight:700,height:42,flexShrink:0}}>
-              Send ↑
-            </button>
-          </div>
-        </div>
-
-        <aside style={{borderLeft:`1px solid ${T.border}`,overflowY:"auto",padding:14,
-          display:"flex",flexDirection:"column",gap:12}}>
-          <PT c={T.green}>Spend Tracker</PT>
-          <CCard>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.muted,marginBottom:8}}>
-              <span>Daily Usage</span>
-              <span style={{color:warn?T.amber:T.green,fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>
-                {sv.toFixed(1)} / {sc} {token}
-              </span>
+              <div style={{fontSize:10,color:C.text2,marginTop:4,
+                textAlign:isUser?"right":"left",paddingInline:4}}>{m.time}</div>
             </div>
-            <div style={{height:5,background:T.faint,borderRadius:3,overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${pct}%`,borderRadius:3,transition:"width .6s",
-                background:warn?`linear-gradient(90deg,${T.amber},${T.red})`:`linear-gradient(90deg,${T.green},${T.accent})`}}/>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontSize:10,color:T.muted}}>
-              <span>{pct.toFixed(0)}% used</span><span>Resets 24h</span>
-            </div>
-          </CCard>
-          <CCard>
-            <FL>Outflow</FL>
-            {[{l:"HBAR",v:spend.hbar,cap:policies.spendLimit.hbar,c:T.hedera2},
-              {l:"USDC",v:spend.usdc,cap:policies.spendLimit.usdc,c:T.accent}
-            ].map(({l,v,cap,c})=>(
-              <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",
-                borderBottom:`1px solid ${T.border}`,fontSize:12}}>
-                <span style={{fontFamily:"'JetBrains Mono',monospace",color:c}}>{l}</span>
-                <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:600}}>
-                  {v.toFixed(1)}<span style={{color:T.muted,fontWeight:400}}> / {cap}</span>
-                </span>
-              </div>
+          );
+        })}
+        {busy&&(
+          <div className="fade bubble-agent" style={{alignSelf:"flex-start",
+            display:"flex",gap:6,alignItems:"center",padding:"12px 16px"}}>
+            {[0,1,2].map(i=>(
+              <div key={i} style={{width:6,height:6,borderRadius:"50%",background:C.text2,
+                animation:`pulse 1.2s ${i*.2}s infinite`}}/>
             ))}
-          </CCard>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MS l="Sent"    v={txLog.filter(t=>t.status==="ok").length}   c={T.green}/>
-            <MS l="Blocked" v={txLog.filter(t=>t.status==="fail").length} c={T.red}/>
           </div>
-          <PT c={T.accent}>Transaction Log</PT>
-          {!txLog.length&&<div style={{fontSize:12,color:T.muted,textAlign:"center",
-            padding:"14px 0",fontStyle:"italic"}}>No transactions yet</div>}
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {txLog.map((tx,i)=>{
-              const c=tx.cat?CATEGORIES[tx.cat]:null;
-              return(
-                <div key={i} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:9,padding:11}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                    <div style={{display:"flex",alignItems:"center",gap:5}}>
-                      {c&&<span style={{fontSize:12}}>{c.icon}</span>}
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,
-                        color:c?.color??T.accent,fontWeight:600,maxWidth:108,
-                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tx.service}</span>
-                    </div>
-                    <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,fontWeight:600,
-                      background:tx.status==="ok"?`${T.green}18`:`${T.red}18`,
-                      color:tx.status==="ok"?T.green:T.red}}>
-                      {tx.status==="ok"?"Sent":"Blocked"}
-                    </span>
-                  </div>
-                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:700,fontSize:14,marginBottom:3}}>
-                    {tx.amount}{" "}
-                    <span style={{fontSize:9,padding:"2px 6px",borderRadius:3,
-                      background:tx.currency==="HBAR"?`${T.hedera}22`:`${T.accent}12`,
-                      color:tx.currency==="HBAR"?T.hedera2:T.accent}}>{tx.currency}</span>
-                  </div>
-                  {tx.signedBy&&<div style={{fontSize:10,color:T.hedera2,marginBottom:2}}>🔑 {tx.signedBy}</div>}
-                  <div style={{fontSize:10,color:T.muted}}>{tx.time}</div>
-                  {tx.hash&&<div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,
-                    color:T.faint,marginTop:4,wordBreak:"break-all"}}>{short(tx.hash)}</div>}
-                </div>
-              );
-            })}
-          </div>
-        </aside>
+        )}
+        <div ref={msgsEnd}/>
+      </div>
+      <div style={{padding:"12px 16px",borderTop:`1px solid ${C.border}`,
+        display:"flex",gap:10,alignItems:"flex-end",background:C.bg,flexShrink:0}}>
+        <textarea className="msg-input" rows={1}
+          value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+          placeholder='e.g. "Pay 50 HBAR to OpenAI"'/>
+        <button className="send-btn" onClick={()=>send()} disabled={busy||!input.trim()}>
+          ↑
+        </button>
       </div>
     </div>
-  </>);
-}
+  );
 
-function PT({children,c}){return(
-  <div style={{display:"flex",alignItems:"center",gap:8,fontFamily:"'JetBrains Mono',monospace",
-    fontSize:10,letterSpacing:".14em",textTransform:"uppercase",color:"#4a6a8a",
-    paddingBottom:9,borderBottom:"1px solid #152236"}}>
-    <div style={{width:6,height:6,borderRadius:"50%",background:c,boxShadow:`0 0 7px ${c}`,flexShrink:0}}/>
-    {children}
-  </div>
-);}
-function FL({children}){return(
-  <div style={{fontSize:10,letterSpacing:".1em",textTransform:"uppercase",color:"#4a6a8a",marginBottom:8}}>{children}</div>
-);}
-function CCard({children}){return(
-  <div style={{background:"#090f1c",border:"1px solid #152236",borderRadius:10,padding:13}}>{children}</div>
-);}
-function Tog({on,onChange}){return(
-  <button onClick={onChange} style={{width:36,height:20,borderRadius:10,flexShrink:0,marginLeft:12,
-    background:on?"#00e5a0":"#162030",border:"none",position:"relative",transition:"background .2s"}}>
-    <span style={{position:"absolute",top:2,width:16,height:16,borderRadius:"50%",
-      background:"white",transition:"left .2s",left:on?18:2}}/>
-  </button>
-);}
-function SRow({val,min,max,step,c,lbl,set}){return(
-  <div>
-    <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#4a6a8a",marginBottom:6}}>
-      <span>{min}</span>
-      <span style={{color:c,fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>{lbl}</span>
-      <span>{max}</span>
+  const LedgerPanel = ()=>(
+    <div style={{padding:"0 16px 100px",overflowY:"auto"}}>
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+          <div style={{fontSize:13,color:C.text2}}>Daily Usage</div>
+          <div className="mono" style={{fontSize:14,fontWeight:700,
+            color:pct>70?C.amber:C.green}}>
+            {sv.toFixed(1)} / {sc} {token}
+          </div>
+        </div>
+        <div className="spend-bar">
+          <div className="spend-fill" style={{width:`${pct}%`,
+            background:pct>70?`linear-gradient(90deg,${C.amber},${C.red})`:`linear-gradient(90deg,${C.green},${C.cyan})`}}/>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:12,color:C.text2}}>
+          <span>{pct.toFixed(0)}% used</span><span>Resets in 24h</span>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+        <div className="stat">
+          <div style={{fontSize:11,color:C.text2,marginBottom:4}}>Sent</div>
+          <div className="mono" style={{fontSize:24,fontWeight:800,color:C.green}}>{sentC}</div>
+        </div>
+        <div className="stat">
+          <div style={{fontSize:11,color:C.text2,marginBottom:4}}>Blocked</div>
+          <div className="mono" style={{fontSize:24,fontWeight:800,color:C.red}}>{blockC}</div>
+        </div>
+        <div className="stat">
+          <div style={{fontSize:11,color:C.text2,marginBottom:4}}>Total</div>
+          <div className="mono" style={{fontSize:24,fontWeight:800,color:C.text}}>{txLog.length}</div>
+        </div>
+      </div>
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",letterSpacing:".1em",marginBottom:12}}>
+          Outflow
+        </div>
+        {[{l:"HBAR",v:spend.hbar,cap:policies.spendLimit.hbar,c:C.purple2},
+          {l:"USDC",v:spend.usdc,cap:policies.spendLimit.usdc,c:C.cyan}
+        ].map(({l,v,cap,c})=>(
+          <div key={l} style={{display:"flex",justifyContent:"space-between",
+            alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+            <span className="mono" style={{color:c,fontSize:14,fontWeight:700}}>{l}</span>
+            <span className="mono" style={{fontSize:14,fontWeight:600}}>
+              {v.toFixed(1)}<span style={{color:C.text2,fontWeight:400}}> / {cap}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",letterSpacing:".1em",marginBottom:12}}>
+        Transaction Log
+      </div>
+      {!txLog.length&&(
+        <div className="card" style={{textAlign:"center",padding:"32px 16px"}}>
+          <div style={{fontSize:32,marginBottom:8}}>📭</div>
+          <div style={{fontSize:14,color:C.text2}}>No transactions yet</div>
+          <div style={{fontSize:12,color:C.text3,marginTop:4}}>Try a preset in the chat tab</div>
+        </div>
+      )}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {txLog.map(tx=>{
+          const c=tx.cat?CATS[tx.cat]:null;
+          return(
+            <div key={tx.id} className="card" style={{padding:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  {c&&<span style={{fontSize:16}}>{c.icon}</span>}
+                  <span style={{fontSize:14,fontWeight:600,color:c?.color??C.text,
+                    maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {tx.service}
+                  </span>
+                </div>
+                <span style={{fontSize:11,padding:"3px 10px",borderRadius:20,fontWeight:600,
+                  background:tx.status==="ok"?`${C.green}14`:`${C.red}14`,
+                  color:tx.status==="ok"?C.green:C.red}}>
+                  {tx.status==="ok"?"Sent":"Blocked"}
+                </span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div className="mono" style={{fontSize:18,fontWeight:800}}>
+                  {tx.amount}{" "}
+                  <span style={{fontSize:12,padding:"2px 8px",borderRadius:6,
+                    background:tx.currency==="HBAR"?`${C.purple}18`:`${C.cyan}14`,
+                    color:tx.currency==="HBAR"?C.purple2:C.cyan}}>{tx.currency}</span>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  {tx.signedBy&&<div style={{fontSize:11,color:C.purple2}}>🔑 {tx.signedBy}</div>}
+                  <div style={{fontSize:11,color:C.text2}}>{tx.time}</div>
+                </div>
+              </div>
+              {tx.hash&&<div className="mono" style={{fontSize:10,color:C.border2,marginTop:6}}>{short(tx.hash)}</div>}
+            </div>
+          );
+        })}
+      </div>
     </div>
-    <input type="range" min={min} max={max} step={step} value={val}
-      onChange={e=>set(Number(e.target.value))} style={{width:"100%",accentColor:c}}/>
-  </div>
-);}
-function MS({l,v,c}){return(
-  <div style={{background:"#090f1c",border:"1px solid #152236",borderRadius:10,padding:"11px 13px"}}>
-    <div style={{fontSize:10,letterSpacing:".1em",textTransform:"uppercase",color:"#4a6a8a",marginBottom:5}}>{l}</div>
-    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:24,fontWeight:700,color:c}}>{v}</div>
-  </div>
-);}
+  );
+
+  const MobileNav = ()=>(
+    <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:50,
+      background:`${C.card}f5`,backdropFilter:"blur(16px)",
+      borderTop:`1px solid ${C.border}`,
+      display:"flex",justifyContent:"space-around",padding:"6px 8px",
+      paddingBottom:"max(6px, env(safe-area-inset-bottom))"}}>
+      {[
+        {id:"chat",   label:"Chat",   icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>},
+        {id:"policy", label:"Policy", icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>},
+        {id:"ledger", label:"Ledger", icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>},
+      ].map(({id,label,icon})=>(
+        <button key={id} className={`nav-tab${tab===id?" active":""}`} onClick={()=>setTab(id)}>
+          {icon}
+          {label}
+        </button>
+      ))}
+    </nav>
+  );
+
+  return (
+    <>
+      <style>{G}</style>
+      {wSheet  && <WalletSheet/>}
+      {modal   && <ApprovalSheet/>}
+      <div className="mobile-layout mobile-only" style={{paddingBottom:0}}>
+        <Header/>
+        <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column"}}>
+          {tab==="chat"   && <ChatPanel/>}
+          {tab==="policy" && <div style={{padding:"16px 0"}}><PolicyPanel/></div>}
+          {tab==="ledger" && <div style={{padding:"16px 0"}}><LedgerPanel/></div>}
+        </div>
+        <MobileNav/>
+      </div>
+      <div className="desktop-grid desktop-only" style={{display:"none"}}>
+        <div className="desktop-panel" style={{borderRight:`1px solid ${C.border}`,paddingTop:16}}>
+          <PolicyPanel/>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          <Header/>
+          <ChatPanel/>
+        </div>
+        <div className="desktop-panel" style={{borderLeft:`1px solid ${C.border}`,paddingTop:16}}>
+          <LedgerPanel/>
+        </div>
+      </div>
+    </>
+  );
+}
