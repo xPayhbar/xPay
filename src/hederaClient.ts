@@ -5,14 +5,12 @@ import {
   Hbar,
   TransferTransaction,
 } from "@hashgraph/sdk";
-import { HederaLangchainToolkit, AgentMode } from "hedera-agent-kit";
 import type { TransferRequest, ExecutedTransaction } from "./types.js";
 import { recordSpend } from "./hooks/spendLimitHook.js";
 import { resolveOnChainRecipient } from "./hooks/allowlistHook.js";
 import { randomUUID } from "crypto";
 
 let _client: Client | null = null;
-let _toolkit: HederaLangchainToolkit | null = null;
 
 export function getHederaClient(): Client {
   if (_client) return _client;
@@ -30,20 +28,6 @@ export function getHederaClient(): Client {
     PrivateKey.fromStringECDSA(privateKey)
   );
   return _client;
-}
-
-export function getHederaToolkit(): HederaLangchainToolkit {
-  if (_toolkit) return _toolkit;
-  const client = getHederaClient();
-  _toolkit = new HederaLangchainToolkit({
-    client,
-    configuration: {
-      tools:   [],
-      plugins: [],
-      context: { mode: AgentMode.AUTONOMOUS },
-    },
-  });
-  return _toolkit;
 }
 
 export async function executeHbarTransfer(
