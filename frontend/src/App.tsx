@@ -3,6 +3,7 @@
 // Week 5 Bounty | hedera-agent-kit@3.8.2
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useWallet } from "./wallet/useWallet";
 
 // ── Design tokens ─────────────────────────────────────────────────────────
 const C = {
@@ -69,7 +70,6 @@ const PRESETS = [
 const uid    = () => Math.random().toString(36).slice(2,8);
 const now    = () => new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
 const short  = (h) => h ? h.slice(0,8)+"…" : "";
-const rHash  = () => "0x"+Array.from({length:32},()=>"0123456789abcdef"[Math.floor(Math.random()*16)]).join("");
 
 async function ask(msg, policies, spend, token) {
   const allowed = policies.allowlist.accounts.map(id=>ALL[id]?.n??id).join(", ")||"none";
@@ -190,50 +190,45 @@ export default function App() {
   const [txLog,  setTxLog]  = useState([]);
   const [modal,  setModal]  = useState(null);
   const [wSheet, setWSheet] = useState(false);
-  const [wallet, setWallet] = useState({connected:false,accountId:null,walletName:null,walletIcon:null,balance:null});
+  const wallet = useWallet("testnet");
   const [signing,setSigning]= useState(false);
   const msgsEnd = useRef(null);
+
+  useEffect(() => {
+    if (wallet.connected && wallet.accountId) {
+      add({
+        role: "system",
+        text: `${wallet.walletIcon ?? "\ud83d\udd17"} ${wallet.walletName} connected \u2014 ${wallet.accountId}. Approvals will be signed directly by your wallet.`
+      });
+    }
+  }, [wallet.connected, wallet.accountId]);
 
   useEffect(()=>{ msgsEnd.current?.scrollIntoView({behavior:"smooth"}); },[msgs]);
 
   const add = (m) => setMsgs(p=>[...p,{id:uid(),time:now(),...m}]);
 
-  const connectW = (w) => {
-    const id = `0.0.${Math.floor(1000000+Math.random()*9000000)}`;
-    setWallet({connected:true,accountId:id,walletName:w.name,walletIcon:w.icon,
-      balance:(200+Math.random()*800).toFixed(2)});
-    setWSheet(false);
-    add({role:"system",text:`${w.icon} ${w.name} connected — ${id}. Your wallet will sign approved transactions.`});
-  };
-
-  const disconnectW = () => {
-    setWallet({connected:false,accountId:null,walletName:null,walletIcon:null,balance:null});
-    setWSheet(false);
-    add({role:"system",text:"Wallet disconnected. Server keypair will be used."});
-  };
 
   const send = useCallback(async(text)=>{
     const msg=(text||input).trim(); if(!msg||busy) return;
     setInput(""); add({role:"user",text:msg}); setBusy(true);
     try{
-      const r = await ask(msg,policies,spend,token);
+      const r = await ask(msg, buildPolicyConfig(), conversationId.current);
       if(r.policy){
-        const labels={spend_limit:"🚫 Spend Limit Triggered",allowlist:"🚫 Allowlist Blocked",
-          approval_threshold:"⏳ Approval Required",anomaly:"⚠️ Anomaly Detected"};
+        const labels={spend_limit:"\ud83d\udeab Spend Limit Triggered",allowlist:"\ud83d\udeab Allowlist Blocked",
+          approval_threshold:"\u23f3 Approval Required",anomaly:"\u26a0\ufe0f Anomaly Detected"};
         add({role:"policy",
           pt:r.decision==="approved"?"approved":r.decision==="needs_approval"?"pending":"blocked",
           text:labels[r.policy]??"Policy Event",detail:r.detail});
       }
       if(r.decision==="approved"&&r.amount>0){
-        const hash=r.hash||rHash();
-        setSpend(s=>({...s,[r.currency==="HBAR"?"hbar":"usdc"]:+(s[r.currency==="HBAR"?"hbar":"usdc"]+r.amount).toFixed(2)}));
+        if (r.spendState) setSpend({hbar:r.spendState.hbar, usdc:r.spendState.usdc});
         setTxLog(l=>[{id:uid(),service:r.service||r.to,cat:r.cat,amount:r.amount,
-          currency:r.currency,status:"ok",hash,time:now(),
-          signedBy:wallet.connected?wallet.walletName:"Server"},...l].slice(0,30));
+          currency:r.currency,status:"ok",hash:r.hash,time:now(),
+          signedBy:"Operator (testnet)"},...l].slice(0,30));
         add({role:"agent",text:r.msg,tx:{amount:r.amount,currency:r.currency,
-          service:r.service||r.to,hash,cat:r.cat,ok:true}});
+          service:r.service||r.to,hash:r.hash,cat:r.cat,ok:true}});
       } else if(r.decision==="needs_approval"){
-        setModal({pid:`p-${Date.now()}`,amount:r.amount,currency:r.currency,
+        setModal({pid:r.pendingId,amount:r.amount,currency:r.currency,
           to:r.to,service:r.service,cat:r.cat,detail:r.detail});
         add({role:"agent",text:r.msg});
       } else if(r.decision==="blocked"){
@@ -241,26 +236,59 @@ export default function App() {
           amount:r.amount,currency:r.currency||token,status:"fail",
           hash:null,time:now(),policy:r.policy},...l].slice(0,30));
         add({role:"agent",text:r.msg});
+      } else if(r.decision==="error"){
+        add({role:"agent",text:`\u26a0\ufe0f ${r.detail||r.msg||"Transfer failed on-chain."}`});
       } else {
         add({role:"agent",text:r.msg});
       }
-    }catch(e){add({role:"agent",text:`⚠️ ${e.message||"Network error."}`});}
+    }catch(e){add({role:"agent",text:`\u26a0\ufe0f ${e.message||"Network error."}`});}
     setBusy(false);
-  },[input,busy,policies,spend,token,wallet]);
+  },[input,busy,policies,token,wallet]);
 
   const approve = async()=>{
-    if(!modal) return; setSigning(true);
-    await new Promise(r=>setTimeout(r,wallet.connected?1400:500));
-    setSigning(false);
-    const hash=rHash();
-    setSpend(s=>({...s,[modal.currency==="HBAR"?"hbar":"usdc"]:+(s[modal.currency==="HBAR"?"hbar":"usdc"]+modal.amount).toFixed(2)}));
-    setTxLog(l=>[{id:uid(),service:modal.service||modal.to,cat:modal.cat,
-      amount:modal.amount,currency:modal.currency,status:"ok",hash,time:now(),
-      policy:"approval_threshold",signedBy:wallet.connected?wallet.walletName:"Operator"},...l].slice(0,30));
-    add({role:"policy",pt:"approved",text:wallet.connected?`✅ Signed by ${wallet.walletName}`:"✅ Approved by operator"});
-    add({role:"agent",text:`Done. ${modal.amount} ${modal.currency} sent to ${modal.service||modal.to}. TX: ${short(hash)}`,
-      tx:{amount:modal.amount,currency:modal.currency,service:modal.service||modal.to,
-        hash,cat:modal.cat,ok:true}});
+    if(!modal || !modal.pid) return;
+    setSigning(true);
+    try{
+      let hash;
+      let amount = modal.amount;
+      let currency = modal.currency;
+      let service = modal.service || modal.to;
+
+      if (wallet.connected) {
+        const result = await wallet.sign({
+          toAccountId: modal.to ?? "0.0.9268478",
+          amount: modal.amount,
+          currency: modal.currency,
+          memo: `xPay: ${modal.service ?? modal.to}`,
+          serviceName: modal.service,
+        });
+        hash = result.txHash;
+        await fetch(`/api/approve/${modal.pid}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletTxHash: hash }),
+        }).catch(()=>{});
+      } else {
+        const result = await approveOnChain(modal.pid);
+        hash = result.hash;
+        amount = result.amount ?? modal.amount;
+        currency = result.currency ?? modal.currency;
+        service = result.service || service;
+        if (result.spendState) setSpend({hbar:result.spendState.hbar, usdc:result.spendState.usdc});
+      }
+
+      setSigning(false);
+      setTxLog(l=>[{id:uid(),service,cat:modal.cat,
+        amount,currency,status:"ok",hash,time:now(),
+        policy:"approval_threshold",
+        signedBy:wallet.connected?`${wallet.walletName} wallet`:"Operator (testnet)"},...l].slice(0,30));
+      add({role:"policy",pt:"approved",text:wallet.connected?`\u2705 Signed by ${wallet.walletName}`:"\u2705 Approved \u2014 executed on testnet"});
+      add({role:"agent",text:`Done. ${amount} ${currency} sent to ${service}. TX: ${short(hash)}`,
+        tx:{amount,currency,service,hash,cat:modal.cat,ok:true}});
+    }catch(e){
+      setSigning(false);
+      add({role:"agent",text:`\u26a0\ufe0f ${e.message||"Signing failed"}`});
+    }
     setModal(null);
   };
 
@@ -380,7 +408,7 @@ export default function App() {
               </p>
               <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
                 {WALLETS.map(w=>(
-                  <button key={w.name} onClick={()=>connectW(w)}
+                  <button key={w.name} onClick={()=>{ const ext = wallet.availableExtensions.find(e=>e.name.toLowerCase().includes(w.name.toLowerCase())&&e.available); ext ? wallet.connectExt(w.name) : wallet.connectModal(); }}
                     style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",
                       borderRadius:14,background:C.card2,border:`1px solid ${C.border}`,
                       textAlign:"left",width:"100%",transition:"border-color .15s"}}>
