@@ -3,7 +3,7 @@
 // Week 5 Bounty | hedera-agent-kit@3.8.2
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useWallet } from "./wallet/useWallet";
+import { useAppKit } from "./wallet/useAppKit";
 
 // ── Design tokens ─────────────────────────────────────────────────────────
 const C = {
@@ -190,7 +190,7 @@ export default function App() {
   const [txLog,  setTxLog]  = useState([]);
   const [modal,  setModal]  = useState(null);
   const [wSheet, setWSheet] = useState(false);
-  const wallet = useWallet("testnet");
+  const wallet = useAppKit();
   const [signing,setSigning]= useState(false);
   const msgsEnd = useRef(null);
 
