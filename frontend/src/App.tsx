@@ -189,7 +189,6 @@ export default function App() {
   const [busy,   setBusy]   = useState(false);
   const [txLog,  setTxLog]  = useState([]);
   const [modal,  setModal]  = useState(null);
-  const [wSheet, setWSheet] = useState(false);
   const wallet = useAppKit();
   const [signing,setSigning]= useState(false);
   const msgsEnd = useRef(null);
@@ -206,6 +205,13 @@ export default function App() {
   useEffect(()=>{ msgsEnd.current?.scrollIntoView({behavior:"smooth"}); },[msgs]);
 
   const add = (m) => setMsgs(p=>[...p,{id:uid(),time:now(),...m}]);
+
+  const buildPolicyConfig = () => ({
+    spendLimit:        policies.spendLimit,
+    allowlist:         policies.allowlist,
+    approvalThreshold: policies.approvalThreshold,
+    anomalyDetection:  policies.anomalyDetection,
+  });
 
 
   const send = useCallback(async(text)=>{
@@ -328,7 +334,7 @@ export default function App() {
       </div>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         {wallet.connected?(
-          <button onClick={()=>setWSheet(true)}
+          <button onClick={()=>wallet.connect()}
             style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",
               borderRadius:20,background:`${C.purple}18`,border:`1px solid ${C.purple2}44`,
               color:C.purple2,fontSize:12,fontWeight:600}}>
@@ -336,7 +342,7 @@ export default function App() {
             <span className="mono" style={{fontSize:11}}>{wallet.accountId?.slice(0,10)}…</span>
           </button>
         ):(
-          <button onClick={()=>setWSheet(true)}
+          <button onClick={()=>wallet.connect()}
             style={{display:"flex",alignItems:"center",gap:6,padding:"7px 14px",
               borderRadius:20,background:`linear-gradient(135deg,${C.purple},${C.cyan}88)`,
               color:"white",fontSize:13,fontWeight:600,border:"none"}}>
@@ -350,89 +356,6 @@ export default function App() {
         </div>
       </div>
     </header>
-  );
-
-  const WalletSheet = ()=>(
-    <div className="sheet-overlay" onClick={e=>{if(e.target===e.currentTarget)setWSheet(false)}}>
-      <div className="sheet slide" style={{maxWidth:560}}>
-        <div className="sheet-handle"/>
-        <div style={{padding:"0 20px"}}>
-          {wallet.connected?(
-            <>
-              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:20}}>
-                <div style={{width:52,height:52,borderRadius:16,fontSize:28,
-                  background:`linear-gradient(135deg,${C.purple}44,${C.cyan}44)`,
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                  border:`1px solid ${C.border2}`}}>{wallet.walletIcon}</div>
-                <div>
-                  <div style={{fontSize:16,fontWeight:700,color:C.green,marginBottom:3}}>
-                    ● {wallet.walletName} Connected
-                  </div>
-                  <div className="mono" style={{fontSize:12,color:C.text2}}>{wallet.accountId}</div>
-                </div>
-              </div>
-              <div className="card2" style={{marginBottom:16}}>
-                <div style={{fontSize:11,color:C.text2,textTransform:"uppercase",
-                  letterSpacing:".1em",marginBottom:8}}>HBAR Balance</div>
-                <div style={{fontSize:32,fontWeight:800,color:C.purple2,
-                  fontFamily:"'JetBrains Mono',monospace"}}>
-                  {wallet.balance} <span style={{fontSize:16,color:C.text2}}>ℏ</span>
-                </div>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-                {[["💸","Sign payments","Wallet signs each txn"],
-                  ["🔑","Non-custodial","xPay never has your key"],
-                  ["🛡","Policy gates","4 hooks before signing"],
-                  ["👁","You decide","Approve high-value txns"],
-                ].map(([icon,t,d])=>(
-                  <div key={t} className="card2" style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                    <span style={{fontSize:20,flexShrink:0}}>{icon}</span>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{t}</div>
-                      <div style={{fontSize:11,color:C.text2,lineHeight:1.4}}>{d}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button onClick={disconnectW}
-                style={{width:"100%",padding:14,borderRadius:12,fontSize:15,fontWeight:600,
-                  background:`${C.red}14`,border:`1px solid ${C.red}30`,color:C.red}}>
-                Disconnect Wallet
-              </button>
-            </>
-          ):(
-            <>
-              <h2 style={{fontSize:20,fontWeight:700,marginBottom:6}}>Connect Wallet</h2>
-              <p style={{fontSize:14,color:C.text2,marginBottom:20,lineHeight:1.6}}>
-                Choose your Hedera wallet. Scan the QR code in your wallet app to connect.
-              </p>
-              <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
-                {WALLETS.map(w=>(
-                  <button key={w.name} onClick={()=>{ const ext = wallet.availableExtensions.find(e=>e.name.toLowerCase().includes(w.name.toLowerCase())&&e.available); ext ? wallet.connectExt(w.name) : wallet.connectModal(); }}
-                    style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",
-                      borderRadius:14,background:C.card2,border:`1px solid ${C.border}`,
-                      textAlign:"left",width:"100%",transition:"border-color .15s"}}>
-                    <div style={{width:44,height:44,borderRadius:12,fontSize:24,
-                      background:`${w.color}18`,border:`1px solid ${w.color}33`,
-                      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                      {w.icon}
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>{w.name}</div>
-                      <div style={{fontSize:12,color:C.text2}}>Tap to connect via WalletConnect 2.0</div>
-                    </div>
-                    <span style={{color:C.text2,fontSize:18}}>›</span>
-                  </button>
-                ))}
-              </div>
-              <div className="mono" style={{fontSize:11,color:C.text2,textAlign:"center",lineHeight:1.6}}>
-                @hashgraph/hedera-wallet-connect@2.1.3 · HIP-820
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
   );
 
   const ApprovalSheet = ()=>(
@@ -480,7 +403,7 @@ export default function App() {
             ))}
           </div>
           {!wallet.connected&&(
-            <button onClick={()=>{setModal(null);setWSheet(true);}}
+            <button onClick={()=>{setModal(null);wallet.connect();}}
               style={{width:"100%",padding:12,borderRadius:12,marginBottom:12,
                 background:`${C.purple}14`,border:`1px solid ${C.purple2}44`,
                 color:C.purple2,fontSize:14,fontWeight:600}}>
@@ -596,7 +519,7 @@ export default function App() {
               <span style={{fontSize:13,color:C.text2}}>Balance</span>
               <span className="mono" style={{fontSize:14,fontWeight:700,color:C.purple2}}>{wallet.balance} ℏ</span>
             </div>
-            <button onClick={()=>setWSheet(true)}
+            <button onClick={()=>wallet.connect()}
               style={{width:"100%",padding:11,borderRadius:10,fontSize:13,fontWeight:600,
                 background:`${C.purple}14`,border:`1px solid ${C.purple2}33`,color:C.purple2}}>
               Manage Wallet
@@ -607,7 +530,7 @@ export default function App() {
             <p style={{fontSize:13,color:C.text2,marginBottom:12,lineHeight:1.5}}>
               Connect HashPack, Blade, or Kabila to sign transactions directly from your wallet.
             </p>
-            <button onClick={()=>setWSheet(true)}
+            <button onClick={()=>wallet.connect()}
               style={{width:"100%",padding:13,borderRadius:12,fontSize:15,fontWeight:700,
                 background:`linear-gradient(135deg,${C.purple},${C.cyan}88)`,
                 border:"none",color:"white"}}>
@@ -894,8 +817,7 @@ export default function App() {
   return (
     <>
       <style>{G}</style>
-      {wSheet  && <WalletSheet/>}
-      {modal   && <ApprovalSheet/>}
+        {modal   && <ApprovalSheet/>}
       <div className="mobile-layout mobile-only" style={{paddingBottom:0}}>
         <Header/>
         <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column"}}>
